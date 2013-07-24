@@ -95,5 +95,19 @@
 	XO.Collection = Backbone.Collection.extend({});
 	XO.Controller = Backbone.Router.extend({});
 
+	/**
+	 * Call to fake out server responses for backbone
+	 */
+	XO.FakeResponses = function(){
+		Backbone.ajax = function(req){
+			setTimeout(function(){
+				var data = JSON.parse(req.data || '{}');
+				if(!data.id) data.id = _.uniqueId('id');
+				if(req.success){
+					req.success(data);
+				}
+			}, _.random(500,1500));
+		};
+	};
 
 })();
