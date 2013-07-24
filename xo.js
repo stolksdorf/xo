@@ -1,60 +1,98 @@
-$(document).ready(function () {
-	
-});
+(function(){
 
+	jQuery("<style type='text/css'> [xo-schematic]{display:none !important;} </style>").appendTo("head");
 
-$.fn.extend({
-	xoexpand: function(trigger,show,delay){
-		var target = $(this);
-		if(show==false){ target.hide(); }
-		delay = delay || 500 //default value of 500 milliseconds
-		trigger.css('cursor', 'pointer');
-		trigger.click(function() {
-			target.slideToggle(delay);
-		});
-	},/*
-	xocomplete: function(keywords){
-		$(this).autocomplete(keywords);
-	},*/
-	xobutton: function(onClick,onHover){
-		var btn = $(this);
-		btn.css('cursor', 'pointer');
-		if(typeof onHover !="undefined"){
-			btn.hover(function(){
-				onHover(btn);
-			});
-		}
-		btn.click(function(){
-			onClick();
-		});
-	},
-	xotimer: function(startTime, trigger, accur){
-		var box = $(this);
-		accur = accur || 0;
-		startCountDownTime = new Date;
-		countDownId = self.setInterval(function() { 
-			box.text((startTime - (new Date - startCountDownTime) / 1000).toFixed(accur));
-			if((new Date - startCountDownTime) > startTime*1000 - 500){
-				clearInterval(countDownId);
-				trigger();
+	XO = {};
+
+	XO.Block = Backbone.View.extend({
+		dom       : {},
+		block     : '',
+		schematic : '',
+
+		initialize : function(model)
+		{
+			if(model instanceof Backbone.Model){
+				this.model = model;
 			}
-		}, 10); 
-	}
-});
+			if(this.block !== ''){
+				this.dom.block = jQuery('[xo-block="' + this.block + '"]');
+				this.getElements();
+				this.render();
+			}
+			return this;
+		},
 
-function xoajax(url, data, callback, image){
-	if(typeof onHover !="undefined"){
-		image.attr("src", "images/loading.gif");
-		image.css("width","30px");
-		image.css("height","30px");
-	}
-	$.ajax({
-		type: "GET",
-		url: url,
-		data: data,
-		success: function(response){
-			if(typeof onHover !="undefined"){image.hide();}
-			callback(response);}
+		injectInto : function(injectionPoint)
+		{
+			if(injectionPoint.length === 0 ){throw 'XO: Could not find the injection point';}
+			if(this.schematic === ''){throw 'XO: Schematic name not set' ;}
+			this.trigger('before:inject', this);
+			this.dom.block = this.getSchematic(this.schematic).appendTo(injectionPoint);
+			this.getElements().render();
+			this.trigger('inject', this);
+			return this;
+		},
+
+		getSchematic : function(schematicName)
+		{
+			var schematicElement = jQuery('[xo-schematic="' + schematicName + '"]');
+			var schematicCode    = jQuery('<div>').append(schematicElement.clone().removeAttr('xo-schematic')).html();
+			return jQuery(schematicCode);
+		},
+
+		getElements : function()
+		{
+			var self = this;
+			this.dom.block.find('[xo-element]').each(function(index, element){
+				self.dom[jQuery(element).attr('xo-element')] = jQuery(element);
+			});
+			return this;
+		},
+
+		render : function()
+		{
+			return this;
+		},
+
+		remove : function()
+		{
+			this.dom.block.remove();
+			this.stopListening();
+			return this;
+		}
 	});
-}
 
+
+
+	XO.Model = Backbone.Model.extend({
+
+		/**
+		 * [onChange description]
+		 * @param  {[type]} attrName [description]
+		 * @param  {[type]} event    [description]
+		 * @return {[type]}          [description]
+		 */
+		onChange : function(attrName, event)
+		{
+			this.on('change:' + attrName, event);
+			event(this.get(attrName));
+			return this;
+		},
+
+		/**
+		 * [toJSONString description]
+		 * @return {[type]} [description]
+		 */
+		toJSONString: function()
+		{
+			return JSON.stringify(this.toJSON());
+		}
+	});
+
+
+
+	XO.Collection = Backbone.Collection.extend({});
+	XO.Controller = Backbone.Router.extend({});
+
+
+})();
