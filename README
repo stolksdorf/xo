@@ -1,5 +1,1 @@
-= XO
-
-XO (for Exoskeleton), is an extension for Backbone.js. It's main purpose to provide a much templating system, based in HTML, rather then another markup language with Mustache. It does this by introducing schematics.
-
-It uses data attritubes on HTML elements prefixed with `xo-` to indicate links with Backbone Views.
+XO (for exo-skeleton) is a very light weight version of Backbone built on top of Archetype. More to come.
