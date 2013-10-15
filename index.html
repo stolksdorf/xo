@@ -1,0 +1,74 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js" ></script>
+	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+	<script src="http://cdn.jsdelivr.net/codemirror/3.14.0/codemirror.min.js" ></script>
+	<script>var PaintJob=function(e){$(document).ready(function(){$.ajax({url:"https://dl.dropboxusercontent.com/u/562800/paintjob.compiled.html",success:function(t){$("body").append(t);Object.create(PaintJob_Block_Project).initialize(e)}})})}</script>
+</head>
+<body></body>
+</html>
+
+<script type="text/javascript" src="xo.js"></script>
+
+<!--
+	*****************************************
+	****        PROJECT CODE HERE        ****
+	*****************************************
+-->
+
+<script>
+	PaintJob({
+		user :'stolksdorf',
+		repo :'XO',
+
+		logo_class : 'icon-lightbulb',
+		logo_color : 'teal',
+
+		/* Project Icons */
+		icons : [
+			{
+				icon_class : 'icon-github',
+				color      : 'blue',
+				link       : 'https://github.com/stolksdorf/XO',
+				tooltip    : 'View on Github'
+			},
+			{
+				icon_class : 'icon-code-fork',
+				color      : 'green',
+				link       : 'https://github.com/stolksdorf/XO/fork',
+				tooltip    : 'Fork on Github'
+			},
+			{
+				icon_class : 'icon-code',
+				color      : 'steel',
+				link       : 'https://raw.github.com/stolksdorf/XO/master/xo.js',
+				tooltip    : 'View Raw'
+			},
+			{
+				icon_class : 'icon-home',
+				color      : 'red',
+				link       : 'https://github.com/stolksdorf',
+				tooltip    : 'Check out more cool things'
+			}
+
+		],
+
+		/* Code Blocks */
+		runnable_code_blocks : true,
+		//show_html_example    : true,
+
+		example_initialize : function(){
+
+		},
+	});
+</script>
+
+<!-- Project Schematics -->
+<pre data-schematic='code_html' style='font-family:Courier;font-size:12px'>
+
+</pre>
+
+<div data-schematic='example_html'>
+	<!-- HTML code for your example goes in here -->
+</div>
