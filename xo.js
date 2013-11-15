@@ -120,19 +120,20 @@
 			this.on('delete', this.off);
 			return this;
 		},
-		set : function(key, value, aggregateChange){
-			if(typeof key === 'object'){
-				for(var k in key){
-					this.set(k, key[k], true);
+		set : function(key, value){
+			var changes = {key : value};
+			var hasChanges = false;
+			if(typeof key === 'object') changes = key;
+
+			for(var key in changes){
+				var val = changes[key];
+				if(this[key] !== val){
+					this[key] = val;
+					hasChanges = true;
+					this.trigger('change:' + key, val);
 				}
-				this.trigger('change'); //don't fire if there wasn't any changes
-				return this;
 			}
-			if(this[key] !== value){
-				this[key] = value;
-				this.trigger('change:' + key, value);
-				if(!aggregateChange) this.trigger('change');
-			}
+			if(trig) this.trigger('change');
 			return this;
 		},
 		onChange : function(attrName, evt){
