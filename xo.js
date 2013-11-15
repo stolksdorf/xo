@@ -1,267 +1,274 @@
-;(function(){
-	jQuery("<style type='text/css'> [xo-schematic]{display:none !important;} </style>").appendTo("head");
+;(function($){
+	$("<style type='text/css'> [xo-schematic]{display:none !important;} </style>").appendTo("head");
 
-	var xo_ajax = function(args){
+	var _ = _ || {
+		map : function(obj, fn){
+			var result = [];
+			for(var propName in obj){
+				if(obj.hasOwnProperty(propName)){ result.push(fn(obj[propName], propName)); }
+			}
+			return result;
+		},
+		reduce : function(obj, fn, memo){
+			for(var propName in obj){
+				if(obj.hasOwnProperty(propName)){ memo = fn(memo, obj[propName], propName); }
+			}
+			return memo;
+		},
+	};
+
+	//Remove due to switching to a bulk ajax call
+	var async_map = function(list, fnName, callback){
+		var result=[],
+			len = list.length;
+		list = list.slice(0);
+		for(var i in list){
+			var obj = list[i];
+			obj[fnName](function(err, data){
+				if(err) return callback(err);
+				result.push(data);
+				if(result.length === len) callback(undefined, result);
+			});
+		};
+	};
+
+	//TODO: add a url parameter
+	var xo_ajax = function(type, callback){
 		var self = this;
-		if(!args.url) throw 'XO : Url not set';
-		var callback = args.callback || function(){};
-		var success  = args.success  || function(){};
+		callback = callback || function(){};
+
+		this.trigger('before:' + type, this);
+		//if(this.models) this.each(function(model){model.trigger('before:' + type)})
+		if(!this.URL){
+			this.trigger(type, this);
+			return callback();
+		}
+		//add these as parameters
 		var http = {
 			'fetch ' : 'GET',
-			'save'   : (self.id ? 'PUT' : 'POST'),
+			'save'   : (this.id ? 'PUT' : 'POST'),
 			'delete' : 'DELETE'
 		};
-		self.trigger('before:'+args.type, self);
-		jQuery.ajax({
-			url  : args.url + (self.id ? "/" + self.id : ""),
-			type : http[args.type],
-			data : args.data,
+		$.ajax({
+			url  : this.URL + (this.id ? "/" + this.id : ""),
+			type : http[type],
+			data : self.attributes(), //maybe make toJSON()?
+			//dataType : 'json',
 			success : function(data){
-				success.call(self, data);
-				callback(undefined, self);
-				self.trigger(args.type, self);
+				self.set(data);
+				callback(undefined, data);
+				self.trigger(type, self);
+				//if(self.models) self.each(function(model){model.trigger(type)})
 			},
 			error : function(err){
 				callback(err);
-				self.trigger('error');
-				self.trigger('error:' + args.type, err);
+				self.trigger('error', self);
 			},
 		});
 	};
 
-	xo = {
-		view : Archetype.extend({
-			view      : undefined,
-			schematic : undefined,
+	xo = {};
 
-			initialize : function(model)
-			{
-				this.model = model;
-				this.dom = {};
-				if(this.view) this.bindToView();
-				return this;
-			},
+	xo.view = Archetype.extend({
+		view      : undefined,
+		schematic : undefined,
 
-			bindToView : function()
-			{
-				var self = this;
-				this.dom.block = jQuery('[xo-view="' + this.view + '"]');
-				if(this.dom.block.length === 0 ){throw 'XO: Could not find view with name ' + this.view;}
-				this.dom.block.find('[xo-element]').each(function(index, element){
-					self.dom[jQuery(element).attr('xo-element')] = jQuery(element);
-				});
-				this.render();
-				return this;
-			},
-			injectInto : function(target, options)
-			{
-				var self = this;
-				options = options || {};
-				if(target.length === 0 ){throw 'XO: Could not find target';}
-				if(!this.schematic){throw 'XO: Schematic name not set' ;}
+		initialize : function(model){
+			this.model = model;
+			this.dom = {};
+			if(this.view){
+				this.on('created', function(){ //switch to once?
+					$(document).ready(this.injectInto.bind(this));
+				}.bind(this));
+			}
+			return this;
+		},
+		injectInto : function(target, prepend){
+			var self = this;
+			if(this.schematic){
+				var schematicElement = $('[xo-schematic="' + this.schematic + '"]');
+				if(target.length === 0){throw 'xo-view: Could not find target';}
+				if(schematicElement.length === 0 ){throw 'xo-view: Could not find schematic with name "' + this.schematic + '"';}
 
-				var getSchematic = function(schematicName){
-					var schematicElement = jQuery('[xo-schematic="' + schematicName + '"]');
-					if(schematicElement.length === 0 ){throw 'XO: Could not find schematic with name "' + schematicName + '"';}
-					var schematicCode = jQuery('<div>').append(schematicElement.clone().removeAttr('xo-schematic')).html();
-					return jQuery(schematicCode);
-				};
-
-				if(options.at_top){
-					this.dom.block = getSchematic(this.schematic).prependTo(target);
+				var schematicClone = $($('<div>').append(schematicElement.clone().removeAttr('xo-schematic')).html());
+				if(prepend){
+					this.dom.view = schematicClone.prependTo(target);
 				} else {
-					this.dom.block = getSchematic(this.schematic).appendTo(target);
+					this.dom.view = schematicClone.appendTo(target);
 				}
-				this.dom.block.find('[xo-element]').each(function(index, element){
-					self.dom[jQuery(element).attr('xo-element')] = jQuery(element);
-				});
-				this.render();
-				return this;
-			},
-			render : function()
-			{
-				return this;
-			},
-			remove : function()
-			{
-				this.trigger('remove', this);
-				if(this.dom.block) this.dom.block.remove();
-				this.off();
-				return this;
-			},
-		}),
+			}else{
+				this.dom.view = $('[xo-view="' + this.view + '"]');
+				if(this.dom.view.length === 0 ){throw 'xo-view: Could not find view with name ' + this.view;}
+			}
+			this.dom.view.find('[xo-element]').each(function(index, element){
+				self.dom[$(element).attr('xo-element')] = $(element);
+			});
+			this.render();
+			this.trigger('render');
+			return this;
+		},
+		remove : function(){
+			this.trigger('remove');
+			if(this.dom.view) this.dom.view.remove();
+			this.off();
+			return this;
+		},
+		render : function(){
+			return this;
+		},
+		show : function(hide){
+			if(hide===false) return this.hide();
+			if(this.dom.view) this.dom.view.show();
+			return this;
+		},
+		hide : function(){
+			if(this.dom.view) this.dom.view.hide();
+			return this;
+		},
+	});
 
-		model : Archetype.extend({
-			urlRoot : undefined,
+	/*
+		MODEL
+	 */
+	xo.model = Archetype.extend({
+		URL : undefined,
 
-			initialize : function(obj)
-			{
-				this.set(obj);
-				return this;
-			},
-			set : function(key, value)
-			{
-				if(typeof key === 'object' && typeof value === 'undefined'){
-					var self = this;
-					_.map(key, function(v, k){
-						self.set(k,v);
-					});
-					this.trigger('change');
-					return this;
+		initialize : function(obj){
+			this.set(obj);
+
+			//add on delete triggers, like calling this.off
+			return this;
+		},
+		set : function(key, value, aggregateChange){
+			if(typeof key === 'object'){
+				for(var k in key){
+					this.set(k, key[k], true);
 				}
-				if(this[key] !== value){
-					this[key] = value;
-					this.trigger('change:' + key, value);
+				this.trigger('change');
+				return this;
+			}
+			if(this[key] !== value){
+				this[key] = value;
+				this.trigger('change:' + key, value);
+				if(!aggregateChange) this.trigger('change');
+			}
+			return this;
+		},
+		onChange : function(attrName, evt){
+			if(typeof attrName === 'object'){
+				for(var k in attrName){
+					this.onChange(k, attrName[k]);
 				}
 				return this;
-			},
-			onChange : function(attrName, event)
-			{
-				var self = this;
-				if(typeof attrName === 'object' && typeof event === 'undefined'){
-					_.map(attrName, function(v, k){
-						self.onChange(k,v);
-					});
-					return this;
+			}
+			this.on('change:' + attrName, evt);
+			evt(this[attrName]);
+			return this;
+		},
+		attributes : function(){
+			return _.reduce(this, function(result, v,k){
+				if(k !== 'URL' && typeof v !=='function'){ result[k] = v; }
+				return result;
+			}, {});
+		},
+		toJSON : function(){ return JSON.stringify(this.attributes(), null, 2);},
+
+		//ajax methods
+		save : function(callback){
+			xo_ajax.call(this, 'save', callback);
+			return this;
+		},
+		fetch : function(callback){
+			xo_ajax.call(this, 'fetch', callback);
+			return this;
+		},
+		delete : function(callback){
+			xo_ajax.call(this, 'delete', callback);
+			return this;
+		},
+	}),
+
+
+	/*
+		COLLECTION
+	 */
+	xo.collection = Archetype.extend({
+		URL    : undefined,
+		model  : undefined,
+		models : [],
+
+		initialize : function(objs){
+			this.set(objs);
+			if(this.model) this.URL = this.model.URL;
+			return this;
+		},
+		set : function(objs){
+			this.models = [];
+			for(var i in objs){
+				this.add(objs[i]);
+			}
+			return this;
+		},
+		get : function(id){
+			return _.reduce(this.models, function(result, model){
+				if(model.id === id) result = model;
+				return result;
+			});
+		},
+		add : function(obj){
+			var findModel = this.get(obj.id);
+			if(findModel) return findModel.set(obj);
+
+			var new_obj = this.model.create(obj); //check if the obj is already the model type
+			var self = this;
+			new_obj.on('delete', function(obj){
+				for(var i in self.models){
+					if(this.id === self.models[i].id) self.models.splice(i,1);
 				}
-				this.on('change:' + attrName, function(){
-					event(self[attrName]);
-				});
-				event(this[attrName]);
-				return this;
-			},
-			attributes : function()
-			{
-				var self = this;
-				return _.reduce(this, function(result, v,k){
-					if(	k === '__events__' ||
-						k === 'urlRoot' ||
-						typeof v ==='function'){ return result;}
-					result[k] = v;
-					return result;
-				}, {});
-			},
-			save : function(callback)
-			{
-				xo_ajax.call(this,{
-					url  : this.urlRoot,
-					type : 'save',
-					data : this.attributes(),
-					callback : callback,
-					success : function(data){
-						this.set(data);
-					}
-				});
-				return this;
-			},
-			fetch : function(callback)
-			{
-				xo_ajax.call(this,{
-					url  : this.urlRoot,
-					type : 'fetch',
-					callback : callback,
-					success : function(data){
-						this.set(data);
-					}
-				});
-				return this;
-			},
-			delete : function(callback)
-			{
-				xo_ajax.call(this,{
-					url  : this.urlRoot,
-					type : 'delete',
-					callback : callback
-				});
-				return this;
-			},
-		}),
+			});
+			this.models.push(new_obj);
+			this.trigger('add', new_obj);
+			return new_obj;
+		},
+		each : function(fn){
+			return _.map(this.models, fn);
+		},
+		toJSON : function(){
+			return JSON.stringify(_.map(this.models, function(model){
+				return model.attributes();
+			}), null, 2);
+		},
 
-		collection : Archetype.extend({
-			model : undefined,
+		//Ajax methods
+		//TODO: These should do bulk op calls to the server, not individual calls
+		fetch : function(callback){
+			xo_ajax.call(this, 'fetch', callback);
+			return this;
+		},
+		delete : function(callback){
+			async_map(this.models, 'delete', callback);
+			return this;
+		},
+		save : function(callback){
+			async_map(this.models, 'save', callback);
+			return this;
+		},
 
-			extend : function(props)
-			{
-				var col = _.extend([], this, props);
-				col.initialize();
-				return col;
-			},
-			create : function(arr)
-			{
-				arr = arr || [];
-				var col = _.extend(arr, this)
-				col.initialize();
-				return col;
-			},
-			add : function(obj)
-			{
-				var newObj = this.model.create();
-				newObj.set(obj);
-				this.push(newObj);
-				this.trigger('add', newObj);
-				return newObj;
-			},
-			clear : function()
-			{
-				self.length = 0;
-				return this;
-			},
-			fetch : function(callback)
-			{
-				xo_ajax.call(this,{
-					url  : this.model.urlRoot,
-					type : 'fetch',
-					callback : callback,
-					success : function(data){
-						var self = this;
-						this.clear();
-						_.map(data, function(data){
-							self.add(data).trigger('fetch');
-						});
-					}
-				});
-				return this;
-			},
-			delete : function(callback)
-			{
-				xo_ajax.call(this,{
-					url  : this.model.urlRoot,
-					type : 'delete',
-					callback : callback,
-					success : function(data){
-						this.clear();
-					}
-				});
-				return this;
-			},
-			save : function(callback)
-			{
-				var self = this,
-					count = this.length;
-				this.trigger('before:save', this);
-				this.clear();
-				_.map(this, function(model){
-					model.save(function(err, data){
-						count--;
-						self.add(data).trigger('save');
-						if(typeof callback === 'function'){
-							if(count === 0){
-								self.trigger('save', self);
-								callback(undefined, self);
-							}
-							if(err){
-								self.trigger('error:save', self);
-								callback(err);
-							}
-						}
-					});
-				});
-				return this;
-			},
-		})
-	};
+		/*
+		save : function(callback){
+			var self = this;
+			callback = callback || function(){};
+			this.each(function(model){ model.trigger('before:save')});
+			xo_ajax.call(this, this.URL || this.model.URL, 'save', 'PUT', function(){
+				callback()
+				self.each(function(model){ model.trigger('save')});
+			});
+			return this;
+		},
+		*/
+	});
 
-})();
+})(jQuery);
 
 
 
