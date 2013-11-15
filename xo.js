@@ -17,55 +17,37 @@
 		},
 	};
 
-	//Remove due to switching to a bulk ajax call
-	var async_map = function(list, fnName, callback){
-		var result=[],
-			len = list.length;
-		list = list.slice(0);
-		for(var i in list){
-			var obj = list[i];
-			obj[fnName](function(err, data){
-				if(err) return callback(err);
-				result.push(data);
-				if(result.length === len) callback(undefined, result);
-			});
-		};
-	};
-
-	//TODO: add a url parameter
-	var xo_ajax = function(type, callback){
-		var self = this;
+	var xo_ajax = function(self, url, method, type, callback){
 		callback = callback || function(){};
 
-		this.trigger('before:' + type, this);
-		//if(this.models) this.each(function(model){model.trigger('before:' + type)})
-		if(!this.URL){
-			this.trigger(type, this);
+		//Fire triggers
+		_.map(self.models, function(model){model.trigger('before:' + method, self)});
+		self.trigger('before:'+method, self);
+
+		//TODO: Figure out what to do with NO URLS
+		if(!url){
+			self.trigger(method, self);
+			_.map(self.models, function(model){model.trigger(method, self)});
 			return callback();
 		}
-		//add these as parameters
-		var http = {
-			'fetch ' : 'GET',
-			'save'   : (this.id ? 'PUT' : 'POST'),
-			'delete' : 'DELETE'
-		};
-		$.ajax({
-			url  : this.URL + (this.id ? "/" + this.id : ""),
-			type : http[type],
-			data : self.attributes(), //maybe make toJSON()?
-			//dataType : 'json',
+
+		jQuery.ajax({
+			url  : url + (self.id ? "/" + self.id : ""),
+			type : type,
+			data : self.attributes(),
 			success : function(data){
 				self.set(data);
-				callback(undefined, data);
-				self.trigger(type, self);
-				//if(self.models) self.each(function(model){model.trigger(type)})
+				_.map(self.models, function(model){model.trigger(method, self)});
+				self.trigger(method, self);
+				return callback(undefined, data);
 			},
 			error : function(err){
-				callback(err);
 				self.trigger('error', self);
+				return callback(err);
 			},
 		});
 	};
+
 
 	xo = {};
 
@@ -77,9 +59,9 @@
 			this.model = model;
 			this.dom = {};
 			if(this.view){
-				this.on('created', function(){ //switch to once?
+				this.once('created', function(){
 					$(document).ready(this.injectInto.bind(this));
-				}.bind(this));
+				});
 			}
 			return this;
 		},
@@ -135,8 +117,7 @@
 
 		initialize : function(obj){
 			this.set(obj);
-
-			//add on delete triggers, like calling this.off
+			this.on('delete', this.off);
 			return this;
 		},
 		set : function(key, value, aggregateChange){
@@ -144,7 +125,7 @@
 				for(var k in key){
 					this.set(k, key[k], true);
 				}
-				this.trigger('change');
+				this.trigger('change'); //don't fire if there wasn't any changes
 				return this;
 			}
 			if(this[key] !== value){
@@ -171,19 +152,18 @@
 				return result;
 			}, {});
 		},
-		toJSON : function(){ return JSON.stringify(this.attributes(), null, 2);},
 
 		//ajax methods
 		save : function(callback){
-			xo_ajax.call(this, 'save', callback);
+			xo_ajax(this, this.URL, 'save', (this.id ? 'PUT' : 'POST'), callback);
 			return this;
 		},
 		fetch : function(callback){
-			xo_ajax.call(this, 'fetch', callback);
+			xo_ajax(this, this.URL, 'fetch', 'GET', callback);
 			return this;
 		},
 		delete : function(callback){
-			xo_ajax.call(this, 'delete', callback);
+			xo_ajax(this, this.URL, 'delete', 'DELETE', callback);
 			return this;
 		},
 	}),
@@ -200,12 +180,13 @@
 		initialize : function(objs){
 			this.set(objs);
 			if(this.model) this.URL = this.model.URL;
+			if(!this.model) this.model = xo.model; //Setup for using a basic model
 			return this;
 		},
 		set : function(objs){
 			this.models = [];
 			for(var i in objs){
-				this.add(objs[i]);
+				this.add(objs[i])
 			}
 			return this;
 		},
@@ -215,57 +196,48 @@
 				return result;
 			});
 		},
+		remove : function(arg){
+			id = arg.id || arg; //handles models and raw ids
+			for(var i in this.models){
+				if(id == this.models[i].id) this.models.splice(i,1);
+			}
+			return this;
+		},
 		add : function(obj){
 			var findModel = this.get(obj.id);
-			if(findModel) return findModel.set(obj);
+			if(findModel) return findModel.set(obj); //See if it already exists
 
-			var new_obj = this.model.create(obj); //check if the obj is already the model type
-			var self = this;
-			new_obj.on('delete', function(obj){
-				for(var i in self.models){
-					if(this.id === self.models[i].id) self.models.splice(i,1);
-				}
-			});
-			this.models.push(new_obj);
-			this.trigger('add', new_obj);
-			return new_obj;
+			if(!this.model.isPrototypeOf(obj)) obj = this.model.create(obj);
+			obj = this.model.create(obj);
+			obj.on('delete', function(obj){
+				this.remove(obj);
+			}.bind(this));
+			this.models.push(obj);
+			this.trigger('add', obj);
+			return obj;
 		},
 		each : function(fn){
 			return _.map(this.models, fn);
 		},
-		toJSON : function(){
-			return JSON.stringify(_.map(this.models, function(model){
+		attributes : function(){
+			return _.map(this.models, function(model){
 				return model.attributes();
-			}), null, 2);
+			});
 		},
 
 		//Ajax methods
-		//TODO: These should do bulk op calls to the server, not individual calls
 		fetch : function(callback){
-			xo_ajax.call(this, 'fetch', callback);
+			xo_ajax(this, this.URL || this.model.URL, 'fetch', 'GET', callback);
 			return this;
 		},
 		delete : function(callback){
-			async_map(this.models, 'delete', callback);
+			xo_ajax(this, this.URL || this.model.URL, 'delete', 'DELETE', callback);
 			return this;
 		},
 		save : function(callback){
-			async_map(this.models, 'save', callback);
+			xo_ajax(this, this.URL || this.model.URL, 'save', 'PUT', callback);
 			return this;
 		},
-
-		/*
-		save : function(callback){
-			var self = this;
-			callback = callback || function(){};
-			this.each(function(model){ model.trigger('before:save')});
-			xo_ajax.call(this, this.URL || this.model.URL, 'save', 'PUT', function(){
-				callback()
-				self.each(function(model){ model.trigger('save')});
-			});
-			return this;
-		},
-		*/
 	});
 
 })(jQuery);
