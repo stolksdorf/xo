@@ -1,4 +1,3 @@
-
 var DEBUG = false;
 
 exports.endpoints = [];
@@ -27,7 +26,7 @@ exports.api = function(endpoint, Model, middleware, handleError){
 		del  : middleware
 	};
 
-	if(!_.isArray(middleware)){
+	if(Object.prototype.toString.call(middleware) !== '[object Array]'){
 		mw.get  = middleware.get  || [];
 		mw.post = middleware.post || [];
 		mw.put  = middleware.put  || [];
@@ -73,21 +72,6 @@ exports.api = function(endpoint, Model, middleware, handleError){
 		if(!req.models) return handleError('no collection', req, res);
 		return res.send(200, exports.clean(req.models));
 	});
-
-	app.delete(endpoint, mw.findAll, mw.del, function(req,res){
-		if(!req.models) return handleError('no collection', req, res);
-		Model.remove({}, function(err){
-			if(err) return handleError(err, req, res);
-			return res.send(200, []);
-		});
-	});
-
-	app.put(endpoint, mw.findAll, mw.put, function(req,res){
-		if(!req.models) return handleError('no collection', req, res);
-
-		//TODO: Add mass collection update
-	});
-
 
 	//Model
 	app.get(endpoint + '/:id', mw.find, mw.get, function(req,res){

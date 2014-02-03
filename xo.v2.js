@@ -16,41 +16,6 @@
 		return memo;
 	};
 
-
-	var xo_ajax = function(self, url, method, type, callback){
-		callback = callback || function(){};
-
-		//Fire triggers
-		map(self.models, function(model){model.trigger('before:' + method, self)});
-		self.trigger('before:'+method, self);
-
-		//TODO: Figure out what to do with NO URLS
-		if(!url){
-			self.trigger(method, self);
-			map(self.models, function(model){model.trigger(method, self)});
-			return callback();
-		}
-
-		$.ajax({
-			url  : url + (self.id ? "/" + self.id : ""),
-			type : type,
-			data : self.attributes(),
-			success : function(data){
-				self.set(data);
-				map(self.models, function(model){model.trigger(method, self)});
-				self.trigger(method, self);
-				return callback(undefined, data);
-			},
-			error : function(err){
-				self.trigger('error', self, err);
-				return callback(err);
-			},
-		});
-	};
-
-
-	/*
-
 	//Better ajax call, no jQuery needed
 	var xo_ajax = function(self, method, callback, data){
 		callback = callback || function(){};
@@ -70,19 +35,18 @@
 		if(!self.URL) return done(data);
 
 		var url = self.URL + (self.id ? "/" + self.id : "")
-		var r = new XMLHttpRequest();
-		r.open(typeMap[method], url, true);
-		r.onreadystatechange = function(){
-			if(r.readyState != 4) return;
-			if(r.status != 200){
-				self.trigger('error', self, r.responseText);
-				return callback(r.responseText);
+		var req = new XMLHttpRequest();
+		req.open(typeMap[method], url, true);
+		req.onreadystatechange = function(){
+			if(req.readyState != 4) return;
+			if(req.status != 200){
+				self.trigger('error', self, req.responseText);
+				return callback(req.responseText);
 			}
-			done(r.responseText);
+			done(req.responseText);
 		};
-		r.send(data);
+		req.send(data);
 	}
-*/
 
 
 
@@ -155,7 +119,7 @@
 		MODEL
 	 */
 	xo.model = Archetype.extend({
-		URL : undefined,
+		url : function(){},
 
 		initialize : function(obj){
 			this.set(obj);
@@ -191,24 +155,20 @@
 			return this;
 		},
 		attributes : function(){
-			//TODO: JSON encode obj? then delete url
-			return reduce(this, function(result, v,k){
-				if(k !== 'URL' && typeof v !=='function'){ result[k] = v; }
-				return result;
-			}, {});
+			return JSON.encode(this);
 		},
 
 		//ajax methods
-		save : function(callback){ //add ability to pass data to save
-			xo_ajax(this, this.URL, 'save', (this.id ? 'PUT' : 'POST'), callback);
+		save : function(callback){ //TODO: add ability to pass data to save
+			xo_ajax(this, this.url(), 'save', (this.id ? 'PUT' : 'POST'), callback);
 			return this;
 		},
 		fetch : function(callback){
-			xo_ajax(this, this.URL, 'fetch', 'GET', callback);
+			xo_ajax(this, this.url(), 'fetch', 'GET', callback);
 			return this;
 		},
 		delete : function(callback){
-			xo_ajax(this, this.URL, 'delete', 'DELETE', callback);
+			xo_ajax(this, this.url(), 'delete', 'DELETE', callback);
 			return this;
 		},
 	}),
@@ -218,8 +178,8 @@
 		COLLECTION
 	 */
 	xo.collection = Archetype.extend({
-		URL    : undefined,
-		model  : undefined, //xo.model
+		url : function(){},
+		model  : xo.model,
 		models : [],
 
 		initialize : function(objs){
