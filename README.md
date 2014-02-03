@@ -7,7 +7,7 @@ XO (for exo-skeleton) is a very light weight Javascript MVC framework (under 300
 # Events
 Every object in XO is extended from an [Archetype](http://stolksdorf.github.io/Archetype) object, so it's both extendable and "event-y".
 
-**on** &nbsp; `model.on(event, function(arg1, arg2,...))` <br>
+**on** &nbsp; `object.on(event, function(arg1, arg2,...))` <br>
 On sets up a listener for a specific event name. Whenever that event is triggered, each function added with `on()`, will be called with whatever arguments `trigger()` was called with.
 
 	sloth.on('nap', function(adjective){
@@ -16,7 +16,7 @@ On sets up a listener for a specific event name. Whenever that event is triggere
 
 	sloth.trigger('nap', sloth.napState);
 
-**once** &nbsp; `model.once(event, function(arg1, arg2,...))` <br>
+**once** &nbsp; `object.once(event, function(arg1, arg2,...))` <br>
 The same as `on()` but after it's first call, it will be removed, ensuring it will only be called once.
 
 	sloth.once('yawn', function(){
@@ -25,10 +25,10 @@ The same as `on()` but after it's first call, it will be removed, ensuring it wi
 	sloth.trigger('yawn');
 	sloth.trigger('yawn'); //Won't yawn twice in a row
 
-**trigger** &nbsp; `model.trigger(event, [arg1, arg2, ...])` <br>
+**trigger** &nbsp; `object.trigger(event, [arg1, arg2, ...])` <br>
 Trigger activates each listener for a specific event. You can add any additional parameters to be passed to the listener.
 
-**off** &nbsp; `model.off([event])` <br>
+**off** &nbsp; `object.off([event])` <br>
 Off removes all listeners on an object for a given event. If no event name is given, it will remove all listeners on that object.
 
 	sloth.on('run_fast', function(){
