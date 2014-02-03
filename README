@@ -42,9 +42,9 @@ Off removes all listeners on an object for a given event. If no event name is gi
 Models in XO are just plain Javascript objects with some functions attached.
 
 **extend** &nbsp; `var ModelDefinition = xo.model.extend({ ... })` <br>
-Create a new model definition, extend the existing model definition from XO. THis model can then be extended further, much like classes.
+Creates a new model definition, extending the existing model definition from XO. This model can then be extended further, much like classes.
 
-	var Sloth = xo.model.extend({
+	var SlothModel = xo.model.extend({
 		URL : function(){
 			return '/api/sloth';
 		},
@@ -56,7 +56,7 @@ Create a new model definition, extend the existing model definition from XO. THi
 **create** &nbsp; `var model = ModelDefinition.create([attributes])` <br>
 Creates a new instance of a model. An object attributes can be passed into to set up the model with those attributes.
 
-	var sloth = Sloth.create({
+	var sloth = SlothModel.create({
 		name : 'Speedy',
 		numOfToes : 3,
 		isHungry : false,
@@ -106,6 +106,14 @@ Sends an ajax request to remove the model from the server if `URL` and the `id` 
 
 # Views
 A view controls the look of your user interface. They can in two flavours; **View**, and **Schematic**. **View** is useful for when you have a single instance of this view in your html and will not be adding more, such as an edit form. **Schematics** are useful for when you have multiple instances, such as items in a todo list.
+
+**extend** &nbsp; `var ViewDefinition = xo.view.extend({ ... })` <br>
+Creates a new view definition, extending the existing view definition from XO. This view can then be extended further, much like classes.
+
+	var SlothInfo = xo.view.extend({
+		view : 'sloth_info',
+		render : function(){ ... }
+	});
 
 **view** &nbsp; `view.view` <br>
 When you define your View, you can set the `view` attrbute as a string. When you create your view, XO will search the DOM for an element with the data property of `xo-view` set to whatever string you passed in. That element will be set as your `view.dom.view`. XO will then iterate within that element and find every element with a data attribute of `xo-element` and add it to the `view.dom` object. Then `view.render()` will be called automatically.
@@ -214,7 +222,7 @@ When creating a instance of a view, you can pass it a model and it will be autom
 Called whenever the view is created. Populate as you see fit.
 
 **render** &nbsp; `view.render()` <br>
-Called whenever the view is added to the page. Popualte this with your model listeners and your DOM events.
+Called whenever the view is added to the page. Populate this with your model listeners and your DOM events.
 
 **appendTo** &nbsp; `view.appendTo(target)` <br>
 Appends the view to the bottom of the target, then calls `view.render()`. The target can be a native HTML element or a jQuery reference.
@@ -228,7 +236,110 @@ Attempts to remove the view from the DOM and removes all event listeners.
 
 
 # Collections
+Collections are a list of models with a few extra features.
+
+**extend** &nbsp; `var CollectionDefinition = xo.collection.extend({ ... })` <br>
+Creates a new collection definition, extending the existing collection definition from XO. This collection can then be extended further, much like classes.
+
+	var SlothCollection = xo.collection.extend({
+		URL : function(){
+			return '/api/sloth';
+		},
+		model : SlothModel
+	});
+
+**create** &nbsp; `view.create([models])` <br>
+Creates a new instance of the collection. Can pass it an array of models or objects to be added to the collection using `collection.set()`.
+
+	var BedOfSloths = SlothCollection.create([
+		{name : 'Mellon'},
+		{name :'Speedy', numOfToes : 3}
+	]);
+
+
+**URL** &nbsp; `collection.URL()` <br>
+Setting this allows you to use `collection.fetch()` to pull all models from the server. XO will try to use the model's URL function if this is not set.
+
+**model** &nbsp; `collection.model()` <br>
+Sets which model to use when adding new objects to the collection. Defaults to `xo.model`.
+
+**models** &nbsp; `collection.models()` <br>
+An array of models in the collection.
+
+**initialize** &nbsp; `collection.initialize()` <br>
+Called after the collection is created.
+
+**set** &nbsp; `collection.set(models)` <br>
+Sets the collection to the list of models passed in. Removes all exsisting models, then uses the `collection.add` function to add the list.
+
+	SlothCollection.set([
+		{name : 'Mellon'},
+		{name :'Speedy', numOfToes : 3}
+	]);
+
+**get** &nbsp; `collection.get(id)` <br>
+Returns the model with the given `id`. Returns `undefined` if it can't find the model.
+
+**remove** &nbsp; `collection.remove(model)`, `collection.remove(id)` <br>
+Removes a model from the collection by model instance or id.
+
+**add** &nbsp; `collection.add(model)` <br>
+Adds the model to the colllection. If the argument is not an instance of the right model, the collection will create a model using the argument. The resultant model will be returned and an `add` event will fire.
+
+**each** &nbsp; `collection.each(function(model){...})` <br>
+Iterates over each model using the given function. Returns an array of all the returned values of each function call.
+
+	SlothCollection.countToes = function(){
+		var result = {
+			twoToes   : 0,
+			threeToes : 0
+		};
+		this.each(function(model){
+			if(model.numOfToes === 2) result.twoToes++;
+			if(model.numOfToes === 3) result.threeToes++;
+		});
+		return result;
+	}
+
+**toJSON** &nbsp; `collection.toJSON()` <br>
+Returns a JSON array of all the models converted into JSON objects.
+
+**save** &nbsp; `collection.save([callback])` <br>
+Calls `model.save` on each model within the collection. Triggers a `before:save` event before the ajax call, and a `save` event when it successful. Any errors will trigger an `error` event.
+
+**fetch** &nbsp; `collection.fetch([callback])` <br>
+Uses the `collection.URL()` to make an ajax GET request. Populates the collection with the result. Triggers a `before:fetch` event before the ajax call, and a `fetch` event when it successful. Any errors will trigger an `error` event.
+
+**destroy** &nbsp; `collection.destroy([callback])` <br>
+Calls `model.destroy` on each model within the collection. Triggers a `before:destroy` event before the ajax call, and a `destroy` event when it successful. Any errors will trigger an `error` event.
+
+
 
 # Router
+XO uses hash fragments to track a page's state to let you build linkable and bookmarkable URLs for your app.
+
+**extend** &nbsp; `var RouterDefinition = xo.router.extend({ ... })` <br>
+Creates a new router definition, extending the existing router definition from XO. This router can then be extended further, much like classes.
+
+	var SlothRouter = xo.router.extend();
+
+**create** &nbsp; `view.create([routes])` <br>
+Creates a new instance of the Router.
+
+	var Router = SlothRouter.create({
+		'/sloth/id' : function(page, id){
+			SlothInfo.loadSloth(id);
+		}
+	});
+
+
+**navigate** &nbsp; `router.navigate(path_fragment)` <br>
+Updates the browsers url with the given `path_fragement`.
+
+**add** &nbsp; `router.add(path, function)` <br>
+Add additonal route triggers to the router.
+
 
 # REST API
+
+Adding more on this later
