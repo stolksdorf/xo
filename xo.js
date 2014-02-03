@@ -220,7 +220,6 @@
 			this.trigger('add', obj);
 			return obj;
 		},
-		//remove
 		each : function(fn){
 			return map(this.models, fn);
 		},
@@ -228,16 +227,21 @@
 			return JSON.parse(JSON.stringify(this.models));
 		},
 
-		//Ajax methods
 		fetch : function(callback){
-			//this.URL should be fine
 			xo_ajax(this, 'fetch', callback);
-			//xo_ajax(this, 'fetch', callback)
 			return this;
 		},
 		destroy : function(callback){
-			//destroy call on each model
-			xo_ajax(this, 'destroy', callback);
+			var count = this.models.length, self = this;
+			self.trigger('before:destroy');
+			map(this.models,function(model){
+				model.destroy(function(){
+					if(--count === 0){
+						self.trigger('destroy');
+						callback && callback();
+					}
+				});
+			});
 			return this;
 		},
 		save : function(callback){
