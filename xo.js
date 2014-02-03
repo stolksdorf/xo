@@ -41,10 +41,8 @@
 		self.trigger('before:'+method, self);
 		if(!self.URL) return done(data);
 
-		var url = self.URL() + (self.id ? "/" + self.id : "")
-
 		$.ajax({
-			url     : url,
+			url     : self.URL() + (self.id ? "/" + self.id : ""),
 			type    : typeMap[method],
 			data    : data,
 			error   : function(req){
@@ -58,13 +56,17 @@
 		})
 	};
 
-
+d
 
 	xo = {};
 
 	//Wraps all the dom elements
 	xo.elementWrapper = $ || function(e){return e;};
 
+
+	/*
+		VIEW
+	 */
 	xo.view = Archetype.extend({
 		view      : undefined,
 		schematic : undefined,
@@ -75,28 +77,37 @@
 			if(this.view) this.once('created', this.injectInto.bind(this));
 			return this;
 		},
-		injectInto : function(target, prepend){
+		prependTo  : function(target){
+			return this.appendTo(target, true);
+		},
+		appendTo : function(target, prepend){
 			if(target.length) target = target[0];
-			if(typeof this.schematic === 'string'){
-				var schematicElement = document.querySelector('[xo-schematic="' + this.schematic + '"]');
-				if(!schematicElement){throw 'xo-view: Could not find schematic with name "' + this.schematic + '"';}
-				schematicElement = schematicElement.cloneNode(true);
-				schematicElement.removeAttribute("xo-schematic");
-				this.dom.view = target.appendChild(schematicElement);
-			} else if(typeof this.schematic !== 'undefined'){
-				this.dom.view = this.schematic.cloneNode(true);
-				if(prepend){ $(target).prepend(this.dom.view) }
-				else{ this.dom.view = target.appendChild(this.dom.view)}
+			if(this.schematic){
+				var schematicElement;
+				if(typeof this.schematic === 'string'){
+					schematicElement = document.querySelector('[xo-schematic="' + this.schematic + '"]');
+					if(!schematicElement){throw 'xo-view: Could not find schematic with name "' + this.schematic + '"';}
+					schematicElement = schematicElement.cloneNode(true);
+					schematicElement.removeAttribute("xo-schematic");
+				} else {
+					schematicElement = this.schematic;
+				}
+				this.dom.view = schematicElement.cloneNode(true);
+				if(prepend){
+					target.insertBefore(this.dom.view, target.firstChild);
+				}else{
+					target.appendChild(this.dom.view);
+				}
 			}
 			if(this.view){
 				this.dom.view = document.querySelector('[xo-view="' + this.view + '"]');
 				if(!this.dom.view){throw 'xo-view: Could not find view with name ' + this.view;}
 			}
+
 			var elements = this.dom.view.querySelectorAll('[xo-element]');
 			for(var i =0; i < elements.length; i++){
 				this.dom[elements[i].getAttribute('xo-element')] = xo.elementWrapper(elements[i]);
 			}
-
 			this.dom.view = xo.elementWrapper(this.dom.view);
 
 			this.render();
