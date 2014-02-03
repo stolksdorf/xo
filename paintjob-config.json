@@ -3,7 +3,7 @@
 	"icon_color" : "red",
 	//"example_image" : "http://i.imgur.com/Mlpfb.gif",
 
-	"runnable_code_blocks" : true,
+	"runnable_code_blocks" : false,
 	"show_html_example"    : true,
 	"scripts"              : ["xo.js"],
 
