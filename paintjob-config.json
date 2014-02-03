@@ -1,5 +1,5 @@
 {
-	"icon_class" : "icon-wrench",
+	"icon_class" : "icon-rocket",
 	"icon_color" : "red",
 	//"example_image" : "http://i.imgur.com/Mlpfb.gif",
 
@@ -33,12 +33,14 @@
 			"link"       : "https://raw.github.com/stolksdorf/XO/master/xo.js",
 			"tooltip"    : "View Raw"
 		},
+		/*
 		{
 			"icon_class" : "icon-download-alt",
 			"color"      : "orange",
 			"link"       : "https://raw.github.com/stolksdorf/XO/master/xo.min.js",
 			"tooltip"    : "Get Production Version"
 		},
+		*/
 		{
 			"icon_class" : "icon-home",
 			"color"      : "red",
