@@ -56,8 +56,6 @@
 		})
 	};
 
-d
-
 	xo = {};
 
 	//Wraps all the dom elements
@@ -74,7 +72,7 @@ d
 		initialize : function(model){
 			this.model = model;
 			this.dom = {};
-			if(this.view) this.once('created', this.injectInto.bind(this));
+			if(this.view) this.once('created', this.appendTo.bind(this));
 			return this;
 		},
 		prependTo  : function(target){
