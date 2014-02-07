@@ -58,9 +58,8 @@
 
 	xo = {};
 
-	//Config
+	//Wraps all the dom elements
 	xo.elementWrapper = $ || function(e){return e;};
-	xo.useDataPrefix = false;
 
 
 	/*
@@ -80,15 +79,14 @@
 			return this.appendTo(target, true);
 		},
 		appendTo : function(target, prepend){
-			var prefix = xo.useDataPrefix ? 'data-' : '';
 			if(target.length) target = target[0];
 			if(this.schematic){
 				var schematicElement;
 				if(typeof this.schematic === 'string'){
-					schematicElement = document.querySelector('[' + prefix + 'xo-schematic="' + this.schematic + '"]');
+					schematicElement = document.querySelector('[xo-schematic="' + this.schematic + '"]');
 					if(!schematicElement){throw 'xo-view: Could not find schematic with name "' + this.schematic + '"';}
 					schematicElement = schematicElement.cloneNode(true);
-					schematicElement.removeAttribute(prefix + "xo-schematic");
+					schematicElement.removeAttribute("xo-schematic");
 				} else {
 					schematicElement = this.schematic;
 				}
@@ -100,13 +98,13 @@
 				}
 			}
 			if(this.view){
-				this.dom.view = document.querySelector('[' + prefix + 'xo-view="' + this.view + '"]');
+				this.dom.view = document.querySelector('[xo-view="' + this.view + '"]');
 				if(!this.dom.view){throw 'xo-view: Could not find view with name ' + this.view;}
 			}
 
-			var elements = this.dom.view.querySelectorAll('[' + prefix + 'xo-element]');
+			var elements = this.dom.view.querySelectorAll('[xo-element]');
 			for(var i =0; i < elements.length; i++){
-				this.dom[elements[i].getAttribute(prefix + 'xo-element')] = xo.elementWrapper(elements[i]);
+				this.dom[elements[i].getAttribute('xo-element')] = xo.elementWrapper(elements[i]);
 			}
 			this.dom.view = xo.elementWrapper(this.dom.view);
 

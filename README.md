@@ -4,6 +4,12 @@ Check out a demo [here](http://stolksdorf.github.io/XO).
 XO (for exo-skeleton) is a very light weight Javascript MVC framework (under 300 lines!). Influenced by Backbone and built on top of [Archetype](http://stolksdorf.github.io/XO). XO focuses on exposing a series of tools, rather then being an emcompassing framework.
 
 
+# What's new
+### v0.2
+- Able to toggle the use of the `data-` prefix on html data ttributes through `xo.useDataPrefix`. Default to `false`.
+- Switch all language to resemble backbone more for destroying objects
+
+
 # Events
 Every object in XO is extended from an [Archetype](http://stolksdorf.github.io/Archetype) object, so it's both extendable and "event-y".
 
