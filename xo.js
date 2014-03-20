@@ -23,7 +23,6 @@
 		return result;
 	};
 
-
 	var xo_ajax = function(self, method, callback, data){
 		callback = callback || function(){};
 		data     = extend(self.toJSON(), data);
@@ -124,6 +123,66 @@
 			return this;
 		}
 	});
+
+xo.view = Archetype.extend({
+	view      : undefined,
+	schematic : undefined,
+
+	initialize : function(model){
+		var self = this;
+		this.model = model;
+		this.dom = {};
+		if(this.view) this.once('created', function(){
+			self.setView(self.view);
+		});
+		return this;
+	},
+	setView: function(view){
+		if(typeof view === 'function'){
+			view = view(this.model);
+		}
+		if(typeof view === 'string'){
+			view = document.querySelector('[' + xo.domNames.view + '="' + view + '"]');
+		}
+		this.dom.view = view;
+		if(!this.dom.view){throw 'XO: View was not set: ' + view;}
+		this.getElements();
+		this.dom.view = xo.domWrapper(this.dom.view);
+		this.trigger('before:render');
+		this.render();
+		this.trigger('render');
+		return this;
+	},
+	getElements: function(){
+		var elements = this.dom.view.querySelectorAll('[' + xo.domNames.element + ']');
+		for(var i=0;i<elements.length;i++){
+			this.dom[elements[i].getAttribute(xo.domNames.element)] = xo.domWrapper(elements[i]);
+		}
+		return this;
+	},
+
+	prependTo  : function(target){
+		return this.appendTo(target, true);
+	},
+	appendTo : function(target, prepend){
+		if(target.length) target = target[0]; //jQuery target check
+		if(!target)         throw 'XO: Could not find target';
+		if(!this.schematic) throw 'XO: Template not set';
+		var newView = this.schematic.cloneNode(true);
+		if(typeof newView === 'function') newView = newView(this.model);
+		if(prepend){
+			target.insertBefore(newView, target.firstChild);
+		}else{
+			target.appendChild(newView);
+		}
+		this.setView(newView);
+		return this;
+	},
+
+	render : function(){
+		return this;
+	}
+});
 
 	/*
 		MODEL
