@@ -48,6 +48,36 @@
 		req.send(data);
 	}
 
+	/*
+
+
+var objset = function(obj, path, val){
+	var parts = path.split('.'), result = obj;
+	for(var i=0; i < parts.length; i++){
+		result = result[parts[i]] = result[parts[i]] || ((i == parts.length-1) ? val : {});
+	}
+}
+
+var objget = function(obj, path){
+	var parts = path.split('.'), result = obj;
+	for(var i=0; i < parts.length; i++){
+		if(typeof result[parts[i]] === 'undefined') return;
+		result = result[parts[i]];
+	}
+	return result;
+}
+
+var self = this;
+_.each(this.dom.view[0].querySelectorAll('[data-element]'), function(element){
+	var name = element.getAttribute('data-element');
+	objset(self.dom, name, $(element));
+});
+this.dom.$items = this.dom.view.find('[data-element^="items."]');
+this.dom.$subItems = this.dom.view.find('[data-element^="subItems."]');
+
+
+	 */
+
 
 
 
