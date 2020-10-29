@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<!-- Doctype HTML5 -->
+<html lang='en'>
+	<head>
+		<meta charset='utf-8'>
+		<meta name='viewport' content='width=device-width, initial-scale=1'>
+
+		<title>DOM Parser test</title>
+	</head>
+	<body>
+		<div id='root'><div>
+
+	</div></div>
+	</body>
+
+
+
+
+<script type="text/javascript">
+
+
+const dp = new DOMParser();
+const PH = '___';
+const hCACHE = {};
+
+const h = (strs, ...data)=>{
+	const key = strs.join(PH);
+
+	if(hCACHE[key]) return {...hCACHE[key], data};
+
+	const node = dp.parseFromString(key, 'text/html').querySelector('body').children[0];
+
+	//iterate over each node here to find the update functions
+	let updates = [];
+	const parseElement = (el, depth=[])=>{
+		if(el.nodeName == "#text" && el.nodeValue.indexOf(PH) !== -1){
+			updates.push({
+				depth,
+				type : 'text', //Change to 'node'?
+				vals : el.nodeValue.split(PH) //Do a fancy comparison here with a filter to see if we can drop this value if it's raw
+			});
+		}
+		if(el.attributes){
+			Array.from(el.attributes).map(({name, value})=>{
+				if(value.indexOf(PH) !== -1){
+					updates.push({
+						depth,
+						//TODO: detect type to be also 'handler'
+						type : 'attr',
+						name,
+						vals : value.split(PH)
+					})
+				}
+			});
+		}
+		if(el.childNodes){
+			Array.from(el.childNodes).map((child, idx)=>{
+				parseElement(child, depth.concat(idx))
+			})
+		}
+	}
+	parseElement(node);
+	hCACHE[key] = {node, updates };
+	return {
+		...hCACHE[key],
+		data
+	}
+};
+
+
+const applyUpdate = (root, updateObj, val)=>{
+	const el = updateObj.depth.reduce((curr, idx)=>{
+		return curr.childNodes[idx];
+	}, root);
+
+	console.log(el)
+
+	if(updateObj.type == 'attr'){
+		if(updateObj.name.startsWith('on')){
+			console.log('APPLYING', el, name, val);
+			console.log('val', val, typeof val)
+			el[name] = val;
+		}else{
+			el.setAttribute(updateObj.name, val);
+		}
+
+	}else{
+		console.log('yes', el, val)
+		el.outerHTML = val;
+	}
+};
+
+const replaceElement = (target, template)=>{
+	target.parentNode.insertBefore(template.cloneNode(true), target);
+	let temp = target.previousElementSibling;
+	target.parentNode.removeChild(target);
+	return temp;
+};
+
+/* ---------------------------- */
+
+const color = 'blue', onClick =()=>alert('hey'), label='yo', link='sdfsdf'
+
+
+const template = h`<div class='Counter' style="background-color:white; color:${color}" onclick=${onClick}>
+	<span>${label}</span>
+	${"some text"}
+	<div>
+		<a href=${link}>Check out this vid</a>
+	</div>
+</div>`
+
+
+console.log(template);
+
+
+let target = document.getElementById('root')
+
+target = replaceElement(target, template.node);
+
+
+template.data.map((val, idx)=>{
+	console.log(val, idx)
+	applyUpdate(target, template.updates[idx], val);
+})
+
+
+//template.node.content.cloneNode(true);
+
+
+// target.parentNode.insertBefore(template.node.cloneNode(true), target);
+
+
+
+// let temp = dp.parseFromString(`<div class='Counter' style="background-color:white; color:blue" onclick>
+// 			<text></text>
+// 			<span></span>
+// 			<div>
+// 				<a href>Check out this vid</a>
+// 			</div>
+// 			<span></span>
+// 		</div>`, 'text/html')
+
+// let el = temp.querySelector('body').children[0]
+
+
+// console.log(el.attributes)
+
+// for (const color of el.attributes){
+// 	console.log(color);
+// 	console.log(typeof color);
+// 	console.log(Object.values(color))
+// 	console.log(color.toString())
+// }
+
+// console.log(Array.from(el.attributes).map(({name, value})=>{
+// 	console.log(name, value)
+// }))
+
+// console.log(Array.from(el.attributes, ({name, value}) => [name, value]) )
+
+
+
+
+
+
+
+</script>
+</html>

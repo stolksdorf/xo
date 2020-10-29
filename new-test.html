@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<!-- Doctype HTML5 -->
+<html lang='en'>
+	<head>
+		<meta charset='utf-8'>
+		<meta name='viewport' content='width=device-width, initial-scale=1'>
+
+		<title>XO test</title>
+	</head>
+	<body>
+		<div id='root'><div></div></div>
+
+	</body>
+
+
+<!-- This example should be a component that render N counters. Each counter keeps it's own state and increments -->
+
+
+
+<script type="text/javascript">
+
+
+// This will automatically generated from parsing html template strings.
+// The keys will be Symbols, instead of nice names
+const Components = {
+	Counter : {
+		/*h`<div class='Counter'>
+			<button onclick=${()=>inc()}>inc</button>
+			<span>${count}</span>
+		</div>`
+		*/
+		template : `<div class='Counter'>
+			<button>inc</button>
+			<span></span>
+		</div>`,
+		update : [
+			(val, root)=>root.children[0].onclick=val,
+			(val, root)=>root.children[1].innerHTML=val,
+		]
+	},
+
+	List : {
+		/*h`<div class='List'>
+			${children}
+		</div>`
+		*/
+		template : `<div class='List'></div>`,
+		update : [
+			(val, root)=>root.innerHTML=val,
+		]
+	},
+
+	Link : {
+		template : `<a></a>`,
+		update : [
+			(val, root)=>root.innerHTML=val,
+		]
+	}
+
+
+}
+
+
+const Templates = {
+	Counter : {
+
+		node : makeTemplate(`<div class='Counter' style="background-color:white; color:blue" onclick>
+			<text></text>
+			<span></span>
+			<div>
+				<a href>Check out this vid</a>
+			</div>
+			<span></span>
+		</div>`),
+		// template: `<div class='Counter' style="background-color:white; color:blue" onclick>
+		// 	<text></text>
+		// 	<span></span>
+		// 	<div>
+		// 		<a href>Check out this vid</a>
+		// 	</div>
+		// 	<span></span>
+		// </div>`,
+
+		//TODO: Convert this away from being update functions,
+		// and instead just descriptins of rwhere the "holes" are
+		update : [
+			//0
+			 (val, root)=>root.style = `background-color:${val}; color:blue;`,
+			//1
+			 (val, root)=>root.onclick = val,
+			//2
+			(val, root)=>{
+				//console.log(root)
+				root.children[0].innerHTML=val
+			},
+			//3
+			(val, root)=>{
+				//console.log(root)
+				root.children[1].innerHTML = val
+			},
+			//4
+			(val, root)=>{
+				root.children[2].children[0].setAttribute('href', val)
+			},
+			//TODO: Try to pass the result of a "render" call into this function
+			// We don't know if this is going to be a component at render time
+			//
+			(val, root)=>{
+				return root.children[3]; //Just return target element if it's a component?
+			}
+		],
+	},
+	Button : {
+		node : makeTemplate(`<button onclick></button>`),
+		update : [
+			(val, root)=>root.onclick=val,
+			(val, root)=>root.innerHTML=val,
+		],
+	}
+
+}
+
+
+
+let Counter = ({bgColor, onClick, text, number, link, boop})=>{
+
+	/*
+	return h`<div class='Counter' style="background-color:${bgColor}; color:blue" onclick=${onClick}>
+		${text}
+		<span>${number}</span>
+		<div>
+			<a href=${link}>Check out this vid</a>
+		</div>
+		${Button({text: 'oh hello', onclick: ()=>alert('yup')})}
+	</div>`;
+	*/
+
+	return {
+		isComp : true,
+		id : 'Counter',
+		template : Templates.Counter,
+		data:[
+			bgColor,
+			onClick,
+			text,
+			number,
+			link,
+			Button({text : boop, onClick: ()=>alert('yup')})
+		]
+	}
+};
+
+const Button = ({text, onClick})=>{
+	/*
+	return x`<button onclick=${onClick}>${text}</button>`
+	*/
+
+	return {
+		isComp : true,
+		id : 'Button',
+		template : Templates.Button,
+		//data:[onClick, text]
+		data:[onClick, (new Date()).getTime()]
+	}
+}
+
+console.log(Templates)
+
+
+
+const compareCache = (idx, newVal, _cache)=>{
+	let val = newVal;
+	if(typeof newVal == 'function' || Array.isArray(newVal)) val = newVal.toString();
+
+	if(_cache[idx] !== val){
+		_cache[idx] = val
+		return true;
+	}
+	return false;
+}
+
+// const render = (target, comp)=>{
+// 	if(cache.length == 0){
+// 		target.innerHTML = comp.template;
+// 	}
+
+// 	const root = target.children[0];
+// 	console.log(root.children)
+
+// 	//update
+// 	comp.data.map((val, idx)=>{>
+// 		if(compareCache(idx, val, cache)){
+// 			console.log('updating', idx, val)
+// 			comp.update[idx](val, root);
+// 			//cache[idx] = val;
+// 		}
+// 	})
+// }
+
+const replaceElement = (target, template)=>{
+	target.parentNode.insertBefore(template.content.cloneNode(true), target);
+	let temp = target.previousElementSibling;
+	target.parentNode.removeChild(target);
+	return temp;
+}
+
+
+let cache = {};
+
+const render = (target, comp, id='0')=>{
+	//target.innerHTML = comp.template;
+	//target.replaceWith(comp.template)
+	// let temp = comp.template.node.content.cloneNode(true)
+	// target.parentNode.replaceChild(temp, target);
+	// console.log(temp.parentNode)
+
+	//this should be cached
+	if(!cache[id]){
+		console.log('creating element', id)
+		cache[id] = {node : replaceElement(target, comp.template.node), data : []};
+	}
+
+	// //update
+	comp.data.map((val, idx)=>{
+		if(val.isComp){
+			render(comp.template.update[idx](val, cache[id].node), val, id + idx);
+		}else{
+			if(compareCache(idx, val, cache[id].data)){
+				console.log(id, 'updating', idx);
+				comp.template.update[idx](val, cache[id].node);
+			}
+		}
+
+	})
+}
+
+
+//////////////////////////////////////////////////////////////
+
+
+const Root = document.getElementById('root');
+
+let compTree = Counter({
+	bgColor : 'red',
+	onClick : ()=>alert('yo'),
+	text : 'Lets go',
+	number : 4,
+	link : 'https://www.youtube.com/watch?v=h9tLcD1r-6w',
+	boop : 'yoyoyoy'
+})
+
+
+
+
+
+render(Root.children[0], compTree)
+
+console.log(cache)
+console.log('-------')
+
+setTimeout(()=>{
+
+	compTree = Counter({
+		bgColor : 'green',
+		onClick : ()=>alert('yo'),
+		text : 'Lets go',
+		number : 4,
+		link : 'https://www.youtube.com/watch?v=h9tLcD1r-6w',
+		boop : 'UPDATE'
+	})
+
+	render(Root.children[0], compTree)
+
+	console.log(cache)
+
+}, 500)
+
+
+
+
+
+
+</script>
+<script>
+
+	const text = `<div>
+
+		test
+	</div>`
+
+
+	parser = new DOMParser();
+	xmlDoc = parser.parseFromString(text,"text/html");
+
+	console.log(xmlDoc)
+
+
+</script>
+</html>
