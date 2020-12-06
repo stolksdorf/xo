@@ -1,0 +1,27 @@
+{
+  "name": "XO",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/xo.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "live-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stolksdorf/XO.git"
+  },
+  "keywords": [],
+  "author": "stolksdorf",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stolksdorf/XO/issues"
+  },
+  "homepage": "https://github.com/stolksdorf/XO#readme",
+  "devDependencies": {
+    "live-server": "^1.2.1"
+  }
+}

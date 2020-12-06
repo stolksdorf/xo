@@ -16,6 +16,15 @@
 <!-- This example should be a component that render N counters. Each counter keeps it's own state and increments -->
 
 
+<script type="text/javascript">
+
+
+
+
+</script>
+
+
+
 
 <script type="text/javascript">
 
@@ -31,7 +40,7 @@ const Components = {
 		*/
 		template : `<div class='Counter'>
 			<button>inc</button>
-			<span></span>
+			<span>[counter]</span>
 		</div>`,
 		update : [
 			(val, root)=>root.children[0].onclick=val,
@@ -41,130 +50,226 @@ const Components = {
 
 	List : {
 		/*h`<div class='List'>
-			${children}
+			<h1>${title}</h1>
+			<div>${children}</div>
 		</div>`
 		*/
-		template : `<div class='List'></div>`,
+		template : `<div class='List'><h1>[title]</h1><div>[placeholder]</div></div>`,
 		update : [
-			(val, root)=>root.innerHTML=val,
+			(val, root)=>root.children[0].innerHTML=val,
+			(val, root)=>root.children[1].innerHTML=val,
 		]
 	},
 
 	Link : {
 		template : `<a></a>`,
 		update : [
-			(val, root)=>root.innerHTML=val,
-		]
-	}
-
-
-}
-
-
-const Templates = {
-	Counter : {
-
-		node : makeTemplate(`<div class='Counter' style="background-color:white; color:blue" onclick>
-			<text></text>
-			<span></span>
-			<div>
-				<a href>Check out this vid</a>
-			</div>
-			<span></span>
-		</div>`),
-		// template: `<div class='Counter' style="background-color:white; color:blue" onclick>
-		// 	<text></text>
-		// 	<span></span>
-		// 	<div>
-		// 		<a href>Check out this vid</a>
-		// 	</div>
-		// 	<span></span>
-		// </div>`,
-
-		//TODO: Convert this away from being update functions,
-		// and instead just descriptins of rwhere the "holes" are
-		update : [
-			//0
-			 (val, root)=>root.style = `background-color:${val}; color:blue;`,
-			//1
-			 (val, root)=>root.onclick = val,
-			//2
-			(val, root)=>{
-				//console.log(root)
-				root.children[0].innerHTML=val
-			},
-			//3
-			(val, root)=>{
-				//console.log(root)
-				root.children[1].innerHTML = val
-			},
-			//4
-			(val, root)=>{
-				root.children[2].children[0].setAttribute('href', val)
-			},
-			//TODO: Try to pass the result of a "render" call into this function
-			// We don't know if this is going to be a component at render time
-			//
-			(val, root)=>{
-				return root.children[3]; //Just return target element if it's a component?
-			}
-		],
-	},
-	Button : {
-		node : makeTemplate(`<button onclick></button>`),
-		update : [
-			(val, root)=>root.onclick=val,
-			(val, root)=>root.innerHTML=val,
-		],
-	}
-
-}
-
-
-
-let Counter = ({bgColor, onClick, text, number, link, boop})=>{
-
-	/*
-	return h`<div class='Counter' style="background-color:${bgColor}; color:blue" onclick=${onClick}>
-		${text}
-		<span>${number}</span>
-		<div>
-			<a href=${link}>Check out this vid</a>
-		</div>
-		${Button({text: 'oh hello', onclick: ()=>alert('yup')})}
-	</div>`;
-	*/
-
-	return {
-		isComp : true,
-		id : 'Counter',
-		template : Templates.Counter,
-		data:[
-			bgColor,
-			onClick,
-			text,
-			number,
-			link,
-			Button({text : boop, onClick: ()=>alert('yup')})
+			(val, root)=>root.setAttribute('href', val),
+			(val, root)=>root.innerHTML=val
 		]
 	}
 };
 
-const Button = ({text, onClick})=>{
+
+
+
+let Data = {
 	/*
-	return x`<button onclick=${onClick}>${text}</button>`
+		id:
+		el:
+		deps : [
+			//either data OR components
+
+
+
+		]
+
+
+
 	*/
+
+
+}
+
+
+/*
+{
+	- props
+	- state
+	- effects
+	- el
+	- func ref
+	- children : []
+}
+
+
+
+*/
+
+let curr = []
+const dataStruct = {children : []}
+
+
+const comp = (id, func)=>{
+
+	return (...args)=>{
+
+
+		console.log('starting comp', id)
+		//follow the curr to the current data structure
+
+		console.log(curr)
+
+		let ds = curr.reduce((acc, idx)=>acc.children[idx], dataStruct);
+		console.log(ds)
+
+		ds.children.push({
+			id,
+			children : []
+		});
+
+		curr.push(0)
+
+
+		let res = func(...args);
+
+		console.log(res);
+
+
+		console.log('ending comp', id);
+
+		curr.pop();
+
+
+		return res;
+
+	}
+
+
+}
+
+
+
+const Counter = comp('counter', (idx)=>{
+
+	//const [count, setCount] = this.useState(0);
+	const count = 4;
+
+	const inc = ()=>{
+		//setCount(count + 1)
+		alert('yo');
+	}
+
 
 	return {
 		isComp : true,
-		id : 'Button',
-		template : Templates.Button,
-		//data:[onClick, text]
-		data:[onClick, (new Date()).getTime()]
+		id : 'Counter',
+		comp : Components.Counter,
+		data:[
+			inc,
+			count
+		]
 	}
+})
+
+
+
+const times = (n,fn)=>Array.from(new Array(n*1),(v,i)=>fn(i));
+
+const List = comp('list', (title, numButtons=2)=>{
+
+	return {
+		isComp : true,
+		id : 'List',
+		comp : Components.List,
+		data: [
+			title,
+			times(numButtons, (i)=>{
+				return Counter(i);
+			})
+		]
+	}
+
+
+
+})
+
+
+
+
+
+//////////////
+
+let Root = document.getElementById('root');
+
+
+//Root = Root.outerHTML = `<a href='test'><div>yo</div></a>`;
+
+
+
+const string2DOM = (htmlString)=>{
+	let temp = document.createElement('template');
+	temp.innerHTML = htmlString;
+	return temp.content.firstChild;
 }
 
-console.log(Templates)
+const replaceElement = (target, html)=>{
+	const el = string2DOM(html);
+	target.replaceWith(el)
+	return el;
+}
+
+
+
+const render = (root, compResult, cache = dataStruct)=>{
+
+	const Comp = compResult.comp
+
+	if(!cache.el){
+		console.log('rendering')
+		cache.el = replaceElement(root, Comp.template)
+	}
+
+
+	compResult.data.map((datum, idx)=>{
+		console.log(idx, datum);
+		console.log(compResult)
+
+
+		//TODO: something different if it's a component
+
+		compResult.comp.update[idx](datum, cache.el);
+	})
+
+
+}
+
+
+
+
+
+
+
+
+
+
+const temp = List('Test', 4);
+
+
+
+render(Root, temp);
+
+
+
+
+
+
+
+//////////////////
+
+
+
+
 
 
 
@@ -197,83 +302,87 @@ const compareCache = (idx, newVal, _cache)=>{
 // 	})
 // }
 
-const replaceElement = (target, template)=>{
-	target.parentNode.insertBefore(template.content.cloneNode(true), target);
-	let temp = target.previousElementSibling;
-	target.parentNode.removeChild(target);
-	return temp;
-}
+// const replaceElement = (target, template)=>{
+// 	target.parentNode.insertBefore(template.content.cloneNode(true), target);
+// 	let temp = target.previousElementSibling;
+// 	target.parentNode.removeChild(target);
+// 	return temp;
+// }
+
+
+
+
 
 
 let cache = {};
 
-const render = (target, comp, id='0')=>{
-	//target.innerHTML = comp.template;
-	//target.replaceWith(comp.template)
-	// let temp = comp.template.node.content.cloneNode(true)
-	// target.parentNode.replaceChild(temp, target);
-	// console.log(temp.parentNode)
+// const render = (target, comp, id='0')=>{
+// 	//target.innerHTML = comp.template;
+// 	//target.replaceWith(comp.template)
+// 	// let temp = comp.template.node.content.cloneNode(true)
+// 	// target.parentNode.replaceChild(temp, target);
+// 	// console.log(temp.parentNode)
 
-	//this should be cached
-	if(!cache[id]){
-		console.log('creating element', id)
-		cache[id] = {node : replaceElement(target, comp.template.node), data : []};
-	}
+// 	//this should be cached
+// 	if(!cache[id]){
+// 		console.log('creating element', id)
+// 		cache[id] = {node : replaceElement(target, comp.template.node), data : []};
+// 	}
 
-	// //update
-	comp.data.map((val, idx)=>{
-		if(val.isComp){
-			render(comp.template.update[idx](val, cache[id].node), val, id + idx);
-		}else{
-			if(compareCache(idx, val, cache[id].data)){
-				console.log(id, 'updating', idx);
-				comp.template.update[idx](val, cache[id].node);
-			}
-		}
+// 	// //update
+// 	comp.data.map((val, idx)=>{
+// 		if(val.isComp){
+// 			render(comp.template.update[idx](val, cache[id].node), val, id + idx);
+// 		}else{
+// 			if(compareCache(idx, val, cache[id].data)){
+// 				console.log(id, 'updating', idx);
+// 				comp.template.update[idx](val, cache[id].node);
+// 			}
+// 		}
 
-	})
-}
+// 	})
+// }
 
 
 //////////////////////////////////////////////////////////////
 
 
-const Root = document.getElementById('root');
+// //const Root = document.getElementById('root');
 
-let compTree = Counter({
-	bgColor : 'red',
-	onClick : ()=>alert('yo'),
-	text : 'Lets go',
-	number : 4,
-	link : 'https://www.youtube.com/watch?v=h9tLcD1r-6w',
-	boop : 'yoyoyoy'
-})
-
-
+// let compTree = Counter({
+// 	bgColor : 'red',
+// 	onClick : ()=>alert('yo'),
+// 	text : 'Lets go',
+// 	number : 4,
+// 	link : 'https://www.youtube.com/watch?v=h9tLcD1r-6w',
+// 	boop : 'yoyoyoy'
+// })
 
 
 
-render(Root.children[0], compTree)
 
-console.log(cache)
-console.log('-------')
 
-setTimeout(()=>{
+// render(Root.children[0], compTree)
 
-	compTree = Counter({
-		bgColor : 'green',
-		onClick : ()=>alert('yo'),
-		text : 'Lets go',
-		number : 4,
-		link : 'https://www.youtube.com/watch?v=h9tLcD1r-6w',
-		boop : 'UPDATE'
-	})
+// console.log(cache)
+// console.log('-------')
 
-	render(Root.children[0], compTree)
+// setTimeout(()=>{
 
-	console.log(cache)
+// 	compTree = Counter({
+// 		bgColor : 'green',
+// 		onClick : ()=>alert('yo'),
+// 		text : 'Lets go',
+// 		number : 4,
+// 		link : 'https://www.youtube.com/watch?v=h9tLcD1r-6w',
+// 		boop : 'UPDATE'
+// 	})
 
-}, 500)
+// 	render(Root.children[0], compTree)
+
+// 	console.log(cache)
+
+// }, 500)
 
 
 

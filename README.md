@@ -13,6 +13,14 @@
 
 -
 
+Data Struct tracks
+	- props
+	- state
+	- effects
+	- el
+	- func ref
+	-
+
 
 
 
