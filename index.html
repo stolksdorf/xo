@@ -119,14 +119,39 @@
 		</div>`
 	}
 
-	console.log(justBP());
+	//console.log(justBP());
 
 
-	xo.render($root, justBP());
+	const Counter = xo.comp(function(init=0){
+		const [counter, setCounter] = this.useState(init);
 
-	console.log('--------------------')
+		const updateCounter = ()=>{
+			console.log('yo', init)
+			setCounter(counter+1)
+		}
 
-	xo.render($root, justBP2());
+		return x`<div>
+			<button onclick=${updateCounter}>
+				inc
+			</button>
+			<div>${counter}</div>
+		</div>`
+	});
+
+	const StateTest = ()=>{
+
+		return x`<div>
+			<div>${Counter(4)}</div>
+			<div>${Counter(7)}</div>
+		</div>`
+	}
+
+
+	xo.render($root, StateTest());
+
+	//xo.render($root, justBP());
+	//console.log('--------------------')
+	//xo.render($root, justBP2());
 
 	//xo.render($root, Main('Oh Hello'), Tree);
 	//setTimeout(()=>xo.render($root, Main('I have changed'), Tree), 3000);

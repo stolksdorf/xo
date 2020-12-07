@@ -31,6 +31,22 @@ Library = (window || {}).Library || {};
 	]
 },
 
+{
+	html : `<div><button onclick=>inc</button><div></div></div>`,
+	slots : [
+		{path: ['children', 0], attr: 'onclick'},
+		{path: ['children', 1], attr: 'innerHTML'}
+	]
+},
+
+{
+	html: `<div><div></div><div></div></div>`,
+	slots : [
+		{path: ['children', 0], attr: 'innerHTML'},
+		{path: ['children', 1], attr: 'innerHTML'}
+	]
+},
+
 ].map((bp)=>{
 	const id = Utils.hash(bp.html);
 	Library[id] = {id, isBP:true, ...bp};

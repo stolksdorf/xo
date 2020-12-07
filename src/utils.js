@@ -50,7 +50,8 @@ Utils.isSame = (a,b)=>{
 
 	//TODO: def make smarter
 	const type=(x)=>{
-		if(typeof x === 'function') return x.toString();
+//		if(typeof x === 'function') return x.toString();
+if(typeof x === 'function') return x;
 		if(typeof x === 'object') return JSON.stringify(x);
 		return x;
 	}

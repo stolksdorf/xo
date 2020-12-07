@@ -5,7 +5,7 @@ Library = (window || {}).Library || {};
 
 const parser = (htmlStrings)=>{
 	console.log(htmlStrings)
-	console.log(Utils.hash(htmlStrings.join('')))
+	//console.log(Utils.hash(htmlStrings.join('').replaceAll('\t', '').replaceAll('\n', '')))
 	throw `Not implemented yet`;
 
 	/*
@@ -24,10 +24,12 @@ const parser = (htmlStrings)=>{
 
 
 const x = (strings, ...data)=>{
-	const blueprintId = Utils.hash(strings.join('').replaceAll('\t', '').replaceAll('\n', ''))
+	const html = strings.join('').replaceAll('\t', '').replaceAll('\n', '')
+	const blueprintId = Utils.hash(html);
 
 	if(!Library[blueprintId]){
-		Library[blueprintId] = parser(strings);
+		console.log(blueprintId)
+		Library[blueprintId] = parser(html);
 	}
 	return {
 		//...Library[blueprintId],
