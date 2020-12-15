@@ -87,6 +87,8 @@ const xo = {
 
 	render : ($target, _obj, leaf=tree['root'])=>{
 
+		console.log($target, _obj)
+
 		let obj = _obj
 		//assume the obj is either a blueprint or a comp
 		console.log($target, obj, leaf)
@@ -104,32 +106,30 @@ const xo = {
 
 		//bp = Library[obj.bp_id];
 
-		if(!leaf.el || leaf.bp_id !== obj.bp_id){
+		if(!leaf.$el || leaf.bp_id !== obj.bp_id){
 			console.log('DRAWING', bp.html)
 			// xo.unmount(leaf)
 
+			console.log($target)
+
 			leaf.bp_id = obj.bp_id;
-			leaf.el    = BP.draw($target, bp);
+			leaf.$el    = BP.draw($target, bp);
 			leaf.data  = [];
 		}
 
 		obj.data.map((val, idx)=>{
 			const {path, attr} = bp.slots[idx];
 
+			console.log('{path, attr}', {path, attr})
+
 			if(val.bp_id || val.isComp){
-				const $targetEl = Utils.extract(leaf.el, path);
+				const $targetEl = path.reduce(($el, i)=>$el.children[i], leaf.$el);
 				if(!leaf.data[idx]) leaf.data[idx] = {};
 				return xo.render($targetEl, val, leaf.data[idx]);
 			}
 			if(!Utils.isSame(leaf.data[idx], val)){
-				const $targetEl = Utils.extract(leaf.el, path);
-
-				//TODO: maybe make this into a BP function?
-					//Apply the surgicalUpdate?
-					//That way you can hide the crimes
-				$targetEl[attr]=val;
+				BP.surgicalUpdate(leaf.$el, {path, attr}, val)
 				leaf.data[idx] = val;
-				console.log('update', $targetEl, attr, val)
 			}
 		})
 	},

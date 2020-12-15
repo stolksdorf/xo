@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>blueprints - xo test environment</title>
+
+	<script src='/src/utils.js'></script>
+	<script src='/src/xo.js'></script>
+
+	<script src='/src/blueprint.js'></script>
+	<script src='/src/library.cache.js'></script>
+</head>
+<body>
+	<div id='root'>
+		<div>[placeholder]</div>
+	</div>
+
+	<hr />
+	<pre><code id='code'></code><pre>
+</body>
+<script>
+	const $root = document.getElementById('root');
+
+	const justBP = ()=>{
+
+		const foo = ()=>alert('yo');
+		const butt = x`<button onclick=${foo}>${'click4foo'}</button>`
+
+		const temp = x`<div>
+			<h1>${'here is a button'}</h1>
+			<slot>${butt}</slot>
+		</div>`
+
+		const title='Just Blueprints'
+
+		return x`<div>
+			<h1>${title}</h1>
+			<slot>${temp}</slot>
+		</div>`
+	}
+
+	const justBP2 = ()=>{
+
+		const foo = ()=>alert('yo!');
+		const butt = x`<button onclick=${foo}>${'click4foo'}</button>`
+
+		const temp = x`<div>
+			<h1>${'here is a button2'}</h1>
+			<slot>${butt}</slot>
+		</div>`
+
+		const title='Just Blueprints!!!'
+
+		return x`<div>
+			<h1>${title}</h1>
+			<slot>${temp}</slot>
+		</div>`
+	}
+
+
+
+
+	xo.render($root, justBP());
+	console.log('--------------------')
+	xo.render($root, justBP2());
+
+
+	console.log(Utils.normalize(tree))
+	setInterval(()=>{
+		//console.log(Tree)
+		document.getElementById('code').innerHTML = JSON.stringify(Utils.normalize(tree), null, '  ');
+	}, 500)
+
+</script>
+</html>

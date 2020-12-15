@@ -1,0 +1,64 @@
+<!--
+TODO:
+- Delegation of this scope is not being passed to arrow functions
+	- will need to fix this
+- Let's add effects
+
+-->
+<!DOCTYPE html>
+<html>
+<head>
+	<title>state - xo test environment</title>
+
+	<script src='/src/utils.js'></script>
+	<script src='/src/xo.js'></script>
+
+	<script src='/src/blueprint.js'></script>
+	<script src='/src/library.cache.js'></script>
+</head>
+<body>
+	<div id='root'>
+		<div>[placeholder]</div>
+	</div>
+
+	<hr />
+	<pre><code id='code'></code><pre>
+</body>
+<script>
+	const $root = document.getElementById('root');
+
+	const Counter = xo.comp(function(init=0){
+		const [counter, setCounter] = this.useState(init);
+
+		const updateCounter = ()=>{
+			console.log('yo', init)
+			setCounter(counter+1)
+		}
+
+		return x`<div>
+			<button onclick=${updateCounter}>
+				inc
+			</button>
+			<div>${counter}</div>
+		</div>`
+	});
+
+	const StateTest = ()=>{
+
+		return x`<div>
+			<div>${Counter(4)}</div>
+			<div>${Counter(7)}yo</div>
+		</div>`
+	}
+
+
+	xo.render($root, StateTest());
+
+	console.log(Utils.normalize(tree))
+	setInterval(()=>{
+		//console.log(Tree)
+		document.getElementById('code').innerHTML = JSON.stringify(Utils.normalize(tree), null, '  ');
+	}, 500)
+
+</script>
+</html>

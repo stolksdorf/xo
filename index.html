@@ -1,21 +1,8 @@
 <!--
-
+TODO:
 - Delegation of this scope is not being passed to arrow functions
 	- will need to fix this
-
 - Let's add effects
-	-
-
-
-- Test out nested blueprint rendering
-	- skip components tbh
-
-
-
-
-
-
-
 
 -->
 <!DOCTYPE html>
@@ -36,131 +23,19 @@
 
 	<hr />
 	<pre><code id='code'></code><pre>
+
+		<hr />
+		<h2>Tests</h2>
+
+		<ul>
+			<li><a href='/tests/state.html'>state</a></li>
+			<li><a href='/tests/blueprints.html'>blueprints</a></li>
+			<li><a href='/tests/effects.html'>effects</a></li>
+			<li><a href='/tests/comp.html'>comp</a></li>
+			<li><a href='/tests/parser_dom.html'>parser_dom</a></li>
+		</ul>
 </body>
 <script>
-
-	const $root = document.getElementById('root');
-
-	// const delegateTest = ()=>{
-	// 	console.log('delegate', this.useState)
-	// }
-
-
-	const Link = xo.comp(function(text, href){
-		return x`<a href=${href}>${text}</a>`
-	}, 'link');
-
-	const Section = xo.comp(function(title){
-
-		const foo = ()=>alert('yo');
-		const yo = x`<button onclick=${foo}>${'click4foo'}</button>`
-
-
-		this.useEffect(()=>{
-			console.log('oh hello');
-
-			return ()=>{
-				console.log('oh bye.')
-			}
-		});
-
-		// console.log('root', this.useState)
-		// delegateTest();
-
-		return x`<div>
-			<h1>${title}</h1>
-			<slot>${yo /*Link('test', 'https://www.w3schools.com/Js/js_function_apply.asp')*/}</slot>
-		</div>`
-	}, 'section');
-
-
-	const Main = xo.comp(function(title){
-		return x`<div>
-			<h1>${title}</h1>
-			<slot>${Section('nested!')}</slot>
-		</div>`
-
-	}, 'main');
-
-
-	const justBP = ()=>{
-
-		const foo = ()=>alert('yo');
-		const butt = x`<button onclick=${foo}>${'click4foo'}</button>`
-
-		const temp = x`<div>
-			<h1>${'here is a button'}</h1>
-			<slot>${butt}</slot>
-		</div>`
-
-		const title='Just Blueprints'
-
-		return x`<div>
-			<h1>${title}</h1>
-			<slot>${temp}</slot>
-		</div>`
-	}
-
-	const justBP2 = ()=>{
-
-		const foo = ()=>alert('yo!');
-		const butt = x`<button onclick=${foo}>${'click4foo'}</button>`
-
-		const temp = x`<div>
-			<h1>${'here is a button2'}</h1>
-			<slot>${butt}</slot>
-		</div>`
-
-		const title='Just Blueprints!!!'
-
-		return x`<div>
-			<h1>${title}</h1>
-			<slot>${temp}</slot>
-		</div>`
-	}
-
-	//console.log(justBP());
-
-
-	const Counter = xo.comp(function(init=0){
-		const [counter, setCounter] = this.useState(init);
-
-		const updateCounter = ()=>{
-			console.log('yo', init)
-			setCounter(counter+1)
-		}
-
-		return x`<div>
-			<button onclick=${updateCounter}>
-				inc
-			</button>
-			<div>${counter}</div>
-		</div>`
-	});
-
-	const StateTest = ()=>{
-
-		return x`<div>
-			<div>${Counter(4)}</div>
-			<div>${Counter(7)}</div>
-		</div>`
-	}
-
-
-	xo.render($root, StateTest());
-
-	//xo.render($root, justBP());
-	//console.log('--------------------')
-	//xo.render($root, justBP2());
-
-	//xo.render($root, Main('Oh Hello'), Tree);
-	//setTimeout(()=>xo.render($root, Main('I have changed'), Tree), 3000);
-
-	console.log(Utils.normalize(tree))
-	setInterval(()=>{
-		//console.log(Tree)
-		document.getElementById('code').innerHTML = JSON.stringify(Utils.normalize(tree), null, '  ');
-	}, 500)
 
 </script>
 </html>
