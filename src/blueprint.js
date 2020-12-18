@@ -5,6 +5,7 @@ const str2Dom = (str)=>{
 	return dp.parseFromString(str, 'text/html').querySelector('body').children[0];
 };
 
+//TODO: this should just be built into the parser
 const weave = (arr, func)=>{
 	return arr.reduce((acc, val, idx)=>{
 		console.log('|'+val+'|')
@@ -22,14 +23,20 @@ const parser = (htmlStrings)=>{
 	let node = str2Dom(htmlStrings.join(PH));
 	let slots = [];
 	const parseElement = (el, path=[])=>{
+		console.log('VAL', el.nodeValue)
 		if(el.nodeName == "#text" && el.nodeValue.indexOf(PH) !== -1){
+			console.log('CURRENT PATH', path)
 			console.log(el.nodeValue);
 			console.log(el.nodeValue.split(PH), path)
 			//TODO: try to replace weave
 
+
+			//const [...first, last] = path;
+			//path : first.concat(idx + last),
 			let temp =weave(el.nodeValue.split(PH), (idx)=>{
 				slots.push({
-					path : path.slice(0,-1).concat(idx),
+					//path : path.slice(0,-1).concat(idx),
+					path : path.slice(0,-1).concat(idx + path[path.length-1]),
 					attr : 'innerHTML'
 				});
 				return document.createElement("slot")
@@ -46,14 +53,17 @@ const parser = (htmlStrings)=>{
 				}
 			});
 		}
+
 		if(el.childNodes){
-			console.log('!!!', el.childNodes)
+			console.log(el.childNodes)
 			Array.from(el.childNodes)
 				.map((child, idx)=>parseElement(child, path.concat(idx)))
 		}
 	}
 	parseElement(node);
-	return { slots, html : node.outerHTML, node }
+	return { slots, node,
+		html : node.outerHTML
+	 }
 };
 
 const x = (strings, ...data)=>{
@@ -70,37 +80,42 @@ const x = (strings, ...data)=>{
 	}
 };
 
-// const draw = ($target, {slots, html, data, node})=>{
-// 	//const el = str2Dom(html);
-// 	const el = node.cloneNode(true);
-// 	$target.replaceWith(el);
-// 	return el;
-// };
-
-const draw = ($target, {slots, html, data})=>{
-	const el = str2Dom(html);
+const draw = ($target, {slots, html, data, node})=>{
+	//const el = str2Dom(html);
+	console.log('DRAW', html, node, slots)
+	const el = node.cloneNode(true);
 	$target.replaceWith(el);
 	return el;
 };
 
-const update = ($target, {slots, html, data}, oldData=[])=>{
-	slots.map((slot, idx)=>{
-		if(data[idx] === oldData[idx]) return;
-		const $el = slot.path.reduce(($el, i)=>{
+// const draw = ($target, {slots, html, data})=>{
+// 	const el = str2Dom(html);
+// 	$target.replaceWith(el);
+// 	return el;
+// };
 
-			return $el.children[i]
-		}, $target);
-		if(typeof data[idx] === 'boolean'){
-			$el.toggleAttribute(slot.attr, data[idx]);
-		}else{
-			$el[slot.attr] = data[idx];
-		}
-	})
-};
+// const update = ($target, {slots, html, data}, oldData=[])=>{
+// 	slots.map((slot, idx)=>{
+// 		if(data[idx] === oldData[idx]) return;
+// 		// const $el = slot.path.reduce(($el, i)=>{
 
-const surgicalUpdate = ($target, slot, val)=>{
+// 		// 	return $el.childNodes[i]
+// 		// }, $target);
+
+// 		const $el = slot.path.reduce(($el, i)=>$el.childNodes[i], $target);
+// 		if(typeof data[idx] === 'boolean'){
+// 			$el.toggleAttribute(slot.attr, data[idx]);
+// 		}else{
+// 			$el[slot.attr] = data[idx];
+// 		}
+// 	})
+// };
+
+//TODO: bump out the path walking function (name? walk?)
+
+const surgicalUpdate = ($target, slot, val)=>{ //might split slot to path and attr
 	console.log($target, slot.path)
-	const $el = slot.path.reduce(($el, i)=>$el.children[i], $target);
+	const $el = slot.path.reduce(($el, i)=>$el.childNodes[i], $target);
 	console.log('update', $el, slot.attr, val)
 	if(typeof val === 'boolean'){
 		$el.toggleAttribute(slot.attr, val);
@@ -111,7 +126,7 @@ const surgicalUpdate = ($target, slot, val)=>{
 
 const BP = {
 	draw,
-	update,
+	//update,
 	surgicalUpdate,
 
 

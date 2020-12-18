@@ -29,12 +29,7 @@ TODO:
 
 	const Counter = xo.comp(function(init=0){
 		const [counter, setCounter] = this.useState(init);
-
-		const updateCounter = ()=>{
-			console.log('yo', init)
-			setCounter(counter+1)
-		}
-
+		const updateCounter = ()=>setCounter(counter+1);
 		return x`<div>
 			<button onclick=${updateCounter}>
 				inc
@@ -44,13 +39,11 @@ TODO:
 	});
 
 	const StateTest = ()=>{
-
 		return x`<div>
 			<div>${Counter(4)}</div>
 			<div>${Counter(7)}yo</div>
 		</div>`
 	}
-
 
 	xo.render($root, StateTest());
 

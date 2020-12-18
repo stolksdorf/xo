@@ -1,3 +1,17 @@
+/* TODO:
+- effects DONE
+- handle null elements
+- unmounting (new test with button toggling elements)
+- make a explainer in the readme with an emoji status chart
+- fix condition rendering checks
+- fix conditional state and effect change checks
+- simple server-side rendering
+  - shortcut through the render function
+  - maybe it jumps out at the top if window is not defined
+
+*/
+
+
 console.log('xo loaded');
 
 let tree = {
@@ -18,24 +32,32 @@ const genScope = ($target, comp, leaf)=>{
 			let idx = stateCounter;
 			stateCounter++;
 			if(typeof leaf.comp.states[idx] === 'undefined'){
-				leaf.comp.states[idx] = initVal;
+				leaf.comp.states[idx] = typeof initVal=='function'?initVal():initVal;
 			}
 			return [
 				leaf.comp.states[idx],
-				(val)=>{
+				(val, force)=>{
+					//TODO: conditional checks
 					//if(Utils.isSame(val, leaf.comp.states[idx])) return;
-					console.log('leaf', leaf.comp)
+					//console.log('leaf', leaf.comp)
 					leaf.comp.states[idx] = val;
 					scope.forceRender();
 				}
 			];
 		},
-		useEffect : (effect)=>{
-			console.log(effect)
+		//todo: rename 'args'
+		useEffect : (effect, triggerArgs)=>{
+			console.log(effect);
+			console.log(leaf);
 			let idx = effectCounter;
 			effectCounter++;
 
-			//TODO: def some work here
+			if(!leaf.comp.effects[idx] || !Utils.isSame2(leaf.comp.effects[idx].args, triggerArgs)){
+				leaf.comp.effects[idx] = {
+					args : triggerArgs,
+					cleanup : effect()
+				}
+			}
 		},
 		useRef : ()=>{
 			throw 'Not implemented yet';
@@ -69,10 +91,12 @@ const executeComp = ($target, comp, leaf)=>{
 	leaf.comp = {
 
 		states : [],
-		//effects : [],
+		effects : [],
 		//refs : [],
 
 		...leaf.comp,
+
+		//func : comp?
 
 		args: comp.args
 
@@ -87,19 +111,44 @@ const xo = {
 
 	render : ($target, _obj, leaf=tree['root'])=>{
 
-		console.log($target, _obj)
+		/*
+			if _obj is falsey
+				replace $target with <slot></slot>
+				unmount(leaf)
+			if _obj is array
+				replace $target with N <slots>
+				call render on each with the array item, create new leafs?
+
+			if _obj is comp
+				create new scope, add to tree
+				execute comp func with scope and (call render ? store in _obj)
+					How to handle comps that call comps?
+
+			if _obj is bp
+
+
+
+
+		*/
+
+		//console.log($target, _obj)
 
 		let obj = _obj
 		//assume the obj is either a blueprint or a comp
 		console.log($target, obj, leaf)
-		let bp = Library[obj.bp_id]
+		let bp = Library[obj.bp_id]; //maybe unneeded?
+
+
 		if(obj.isComp){
 			//might be an issue tbh
+
+			//check the stored args only
+
 			let res = executeComp($target, obj, leaf);
 
 
 
-			console.log('new res', res)
+			console.log('new res', res, $target)
 
 			return xo.render($target, res, leaf)
 		}
@@ -123,7 +172,7 @@ const xo = {
 			console.log('{path, attr}', {path, attr})
 
 			if(val.bp_id || val.isComp){
-				const $targetEl = path.reduce(($el, i)=>$el.children[i], leaf.$el);
+				const $targetEl = path.reduce(($el, i)=>$el.childNodes[i], leaf.$el);
 				if(!leaf.data[idx]) leaf.data[idx] = {};
 				return xo.render($targetEl, val, leaf.data[idx]);
 			}
@@ -133,12 +182,19 @@ const xo = {
 			}
 		})
 	},
-	unmount : (tree_path)=>{
+	unmount : ()=>{
 		//this removes sub-trees from the data cache and the dom
 		//while triggering unmounting effects and what not
 
 		//loads tree path
 		// triggers an unmount (undo effects)
+	},
+	mount : ()=>{
+		//draw blueprint
+		//create scope and attach to tree
+			// maybe only do this if comp?
+		//mount returns ref to element maybe?
+
 	},
 	comp : (func, id)=>{
 		return (...args)=>{
