@@ -22,7 +22,10 @@ TODO:
 	</div>
 
 	<hr />
-	<pre><code id='code'></code><pre>
+	<div style='display:flex'>
+		<pre><code id='tree'></code></pre>
+		<pre><code id='lib'></code></pre>
+	</div>
 </body>
 <script>
 	const $root = document.getElementById('root');
@@ -37,7 +40,7 @@ TODO:
 		return x`<div>oh hello</div>`
 	})
 
-	const Toggle = xo.comp(function(init=0){
+	const Toggle = xo.comp(function(foo){
 		const [toggle, setToggle] = this.useState(false);
 
 		return x`<div>
@@ -47,13 +50,14 @@ TODO:
 	});
 
 
-	xo.render($root, Toggle());
+	xo.render($root, Toggle(6));
 
 
 	console.log(Utils.normalize(tree))
 	setInterval(()=>{
 		//console.log(Tree)
-		document.getElementById('code').innerHTML = JSON.stringify(Utils.normalize(tree), null, '  ');
+		document.getElementById('tree').innerHTML = JSON.stringify(Utils.normalize(tree), null, '  ');
+		document.getElementById('lib').innerHTML = JSON.stringify(Utils.normalize(Library), null, '  ');
 	}, 500)
 
 </script>

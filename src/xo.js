@@ -9,12 +9,45 @@
   - shortcut through the render function
   - maybe it jumps out at the top if window is not defined
 
+- Key maps solve the 'keys' issue for lists of components during rendering
+
+
+- Have three types of objects in the source tree
+	- data
+	- comp
+	- bp
+
+*/
+
+/* IDEAS:
+
+blueprints and comps each are unique in the tree
+
+{
+	type: 'comp',
+	args, func, scope...
+
+	child : {
+		type : 'bp',
+		id : -435934,
+		children : [
+			{ type: 'comp', ... },
+			{ type: 'bp', ... }
+			{ type: 'data', ... }
+		],
+	}
+}
+
+
 */
 
 
 console.log('xo loaded');
 
 let tree = {
+	//can bump this down  layer,
+	//this tree should only exist per render call
+		// need to build a nested render call, with an outside scope to hold the tree
 	'root':{
 		data: []
 	}
@@ -28,19 +61,24 @@ const genScope = ($target, comp, leaf)=>{
 	let effectCounter = 0;
 	let refCounter = 0;
 	const scope = {
+		reset : ()=>{
+			stateCounter = 0;
+			effectCounter = 0;
+			refCounter = 0;
+		},
 		useState : (initVal)=>{
 			let idx = stateCounter;
 			stateCounter++;
-			if(typeof leaf.comp.states[idx] === 'undefined'){
-				leaf.comp.states[idx] = typeof initVal=='function'?initVal():initVal;
+			if(typeof leaf.states[idx] === 'undefined'){
+				leaf.states[idx] = typeof initVal=='function'?initVal():initVal;
 			}
 			return [
-				leaf.comp.states[idx],
+				leaf.states[idx],
 				(val, force)=>{
 					//TODO: conditional checks
-					//if(Utils.isSame(val, leaf.comp.states[idx])) return;
+					//if(Utils.isSame(val, leaf.states[idx])) return;
 					//console.log('leaf', leaf.comp)
-					leaf.comp.states[idx] = val;
+					leaf.states[idx] = val;
 					scope.forceRender();
 				}
 			];
@@ -52,8 +90,8 @@ const genScope = ($target, comp, leaf)=>{
 			let idx = effectCounter;
 			effectCounter++;
 
-			if(!leaf.comp.effects[idx] || !Utils.isSame2(leaf.comp.effects[idx].args, triggerArgs)){
-				leaf.comp.effects[idx] = {
+			if(!leaf.effects[idx] || !Utils.isSame2(leaf.effects[idx].args, triggerArgs)){
+				leaf.effects[idx] = {
 					args : triggerArgs,
 					cleanup : effect()
 				}
@@ -65,7 +103,7 @@ const genScope = ($target, comp, leaf)=>{
 		forceRender : ()=>{
 			//removes previously stored args from the tree
 			//then calls xo.render
-			leaf.comp.args = [];
+			leaf.args = [];
 			return xo.render($target, comp, leaf);
 		}
 	};
@@ -88,123 +126,218 @@ const executeComp = ($target, comp, leaf)=>{
 	// };
 
 	//TODO: tes tto me sure this order works
-	leaf.comp = {
+	leaf = {
 
 		states : [],
 		effects : [],
 		//refs : [],
 
-		...leaf.comp,
+		...leaf,
 
 		//func : comp?
 
-		args: comp.args
+		args: comp.args,
+
+
 
 	};
 
+	leaf.child = comp.func.apply(genScope($target, comp, leaf), comp.args)
+
 	console.log('here')
 
-	return comp.func.apply(genScope($target, comp, leaf), comp.args);
+	return ;
 }
+
+
+const render = ($target, obj, leaf)=>{
+
+	/*
+		if obj is falsey
+			replace $target with <slot></slot>
+			unmount(leaf)
+		if obj is array
+			replace $target with N <slots>
+			call render on each with the array item, create new leafs?
+		if obj is comp
+			chec existing scope
+				if comp and args haven't changed, return
+			create new scope, add to tree
+			execute comp func with scope and (call render ? store in obj)
+				How to handle comps that call comps?
+		if obj is bp
+			pull up bp from lib
+			when to unmount?
+			when to redraw?
+			loop through data points and update when delta
+	*/
+	if(!obj){
+		console.log('falsey bb', obj, leaf);
+		xo.unmount(leaf, true);
+		return;
+	}
+	if(obj.isComp){
+		//might be an issue tbh
+		//check the stored args only
+		executeComp($target, obj, leaf);
+		//console.log('new res', res, $target)
+		return xo.render($target, leaf.child, leaf)
+	}
+	if(obj.type == 'bp'){
+
+		const bp = Library[obj.id];
+		//not same type, not same id,
+
+		if(obj.type !== leaf.type || leaf.id !== obj.id){
+			console.log('Draw blueprint');
+
+			// leaf.isBP = true;
+			// leaf.bp_id = obj.bp_id;
+			// leaf.$el    = draw($target, bp);
+			// leaf.children  = [];
+			//leaf.data  = []; //???
+
+			const $main = draw($target, bp);
+			leaf = {
+				...obj,
+				$el : $main,
+				children : obj.data.map((datum, idx)=>{
+					const {path, attr}=bp.slots[idx];
+					return {
+						type : 'data',
+						$el : path.reduce(($el, i)=>$el.childNodes[i], $main),
+						attr,
+						val : null
+					}
+				})
+			}
+		}
+		obj.data.map((val, idx)=>{
+
+			//TODO: just map straihg tinto render
+			// no processing here
+
+
+
+			//const {path, attr} = bp.slots[idx];
+			//console.log('{path, attr}', {path, attr})
+
+			if(leaf.children[idx].val == val){
+				console.log('should skip');
+			}
+
+
+
+
+			if(val.bp_id || val.isComp){
+				const $targetEl = path.reduce(($el, i)=>$el.childNodes[i], leaf.$el); //make into func
+				if(!leaf.children[idx]) leaf.children[idx] = {};
+				return xo.render($targetEl, val, leaf.children[idx]);
+			}
+			if(!Utils.isSame(leaf.children[idx], val)){
+				BP.surgicalUpdate(leaf.$el, {path, attr}, val)
+				leaf.children[idx] = val;
+			}
+		})
+		return leaf;
+	}
+	if(obj.type == 'data'){
+		// compare to the leaf here for old val
+		// if different, do an update, target el is stored within the leaf
+	}
+	//reanme this to isCollection or isArrOrObj
+	if(Array.isArray(obj) || Utils.isPlainObject(obj)){
+		throw 'List elements not supported yet'
+	}
+	throw `Given a non-parsable value into the renderer: ${obj}`;
+
+};
+
+const unmount = (leaf, shouldReplace=true)=>{
+	console.log('UNMOUNTING', leaf)
+	if(leaf.type == 'comp'){
+		unmount(leaf.child);
+		leaf.effects.map(({cleanup})=>cleanup());
+	}
+	if(leaf.type == 'bp'){
+		leaf.children.map(c=>xo.unmount(c, shouldReplace)); //always false?
+		if(shouldReplace) leaf.$el.replaceWith(document.createElement('slot'));
+	}
+	delete leaf;
+};
+
+const mount = ()=>{
+	//draw blueprint
+	//create scope and attach to tree
+		// maybe only do this if comp?
+	//mount returns ref to element maybe?
+
+};
+
+
+const x = (strings, ...data)=>{
+	const blueprintId = Utils.hash(strings.join(''));
+	if(!Library[blueprintId]){
+		console.log(blueprintId)
+		Library[blueprintId] = Parser(strings);
+	}
+	console.log('LIB', Library)
+	return {
+		//...Library[blueprintId],
+		isBP : true,
+		type: 'bp',
+		id : blueprintId,
+		bp_id : blueprintId,
+		data
+	}
+};
+
+const draw = ($target, {slots, html, data, node})=>{
+	//const el = str2Dom(html);
+	console.log('DRAW', html, node, slots)
+	const el = node.cloneNode(true);
+	$target.replaceWith(el);
+	return el;
+};
+
+
+// Rename
+const surgicalUpdate = ($target, slot, val)=>{ //might split slot to path and attr
+	console.log($target, slot.path)
+	const $el = slot.path.reduce(($el, i)=>$el.childNodes[i], $target);
+	console.log('update', $el, slot.attr, val)
+	if(typeof val === 'boolean'){
+		$el.toggleAttribute(slot.attr, val);
+	}else{
+		$el[slot.attr] = val;
+	}
+};
+
+
+
 
 const xo = {
 
-	render : ($target, _obj, leaf=tree['root'])=>{
-
-		/*
-			if _obj is falsey
-				replace $target with <slot></slot>
-				unmount(leaf)
-			if _obj is array
-				replace $target with N <slots>
-				call render on each with the array item, create new leafs?
-
-			if _obj is comp
-				create new scope, add to tree
-				execute comp func with scope and (call render ? store in _obj)
-					How to handle comps that call comps?
-
-			if _obj is bp
-
-
-
-
-		*/
-
-		//console.log($target, _obj)
-
-		let obj = _obj
-		//assume the obj is either a blueprint or a comp
-		console.log($target, obj, leaf)
-		let bp = Library[obj.bp_id]; //maybe unneeded?
-
-
-		if(obj.isComp){
-			//might be an issue tbh
-
-			//check the stored args only
-
-			let res = executeComp($target, obj, leaf);
-
-
-
-			console.log('new res', res, $target)
-
-			return xo.render($target, res, leaf)
-		}
-
-		//bp = Library[obj.bp_id];
-
-		if(!leaf.$el || leaf.bp_id !== obj.bp_id){
-			console.log('DRAWING', bp.html)
-			// xo.unmount(leaf)
-
-			console.log($target)
-
-			leaf.bp_id = obj.bp_id;
-			leaf.$el    = BP.draw($target, bp);
-			leaf.data  = [];
-		}
-
-		obj.data.map((val, idx)=>{
-			const {path, attr} = bp.slots[idx];
-
-			console.log('{path, attr}', {path, attr})
-
-			if(val.bp_id || val.isComp){
-				const $targetEl = path.reduce(($el, i)=>$el.childNodes[i], leaf.$el);
-				if(!leaf.data[idx]) leaf.data[idx] = {};
-				return xo.render($targetEl, val, leaf.data[idx]);
-			}
-			if(!Utils.isSame(leaf.data[idx], val)){
-				BP.surgicalUpdate(leaf.$el, {path, attr}, val)
-				leaf.data[idx] = val;
-			}
-		})
+	//TODO: this should eventually return the tree
+	render : ($target, obj, tree)=>{
+		tree = tree || {};
+		render($target, obj, tree);
+		return tree;
 	},
-	unmount : ()=>{
-		//this removes sub-trees from the data cache and the dom
-		//while triggering unmounting effects and what not
 
-		//loads tree path
-		// triggers an unmount (undo effects)
-	},
-	mount : ()=>{
-		//draw blueprint
-		//create scope and attach to tree
-			// maybe only do this if comp?
-		//mount returns ref to element maybe?
-
-	},
 	comp : (func, id)=>{
 		return (...args)=>{
 			return {
 				isComp : true, //TODO: make into a symbol
+				type: 'comp',
+				id : Utils.hash(func.toString()),
 				args,
 				func
 			}
 		}
 
-	}
+	},
+
+	keymap : (arr, fn)=>Object.fromEntries(arr.map(fn)),
 }
 

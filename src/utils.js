@@ -13,11 +13,20 @@ Utils.hash = (str)=>{
 	}, 0)
 };
 
+function escapeHTML(str) {
+    return str
+    	.replace(/&/g,'&amp;')
+    	.replace(/</g,'&lt;')
+    	.replace(/>/g,'&gt;')
+    	.replace(/\n/g,'')
+    	.replace(/\t/g,'');
+}
+
 
 //remove
 Utils.normalize = (obj)=>{
 	if(obj instanceof HTMLElement){
-		return obj.outerHTML.toString();
+		return escapeHTML(obj.outerHTML.toString());
 	}
 
 	if(Array.isArray(obj)){
@@ -69,13 +78,19 @@ Utils.isSame2 = (a,b)=>{
 	if(a === b) return true;
 	if(typeof a !== typeof b) return false;
 
+
+	if(typeof a == 'function'){
+		return a.toString() == b.toString();
+	}
+
+	//wrap above into a lambda function
+	//use isColelction below, and Object.entries
+
 	if(Array.isArray(a)){
 		if(a.length !== b.length) return false;
 		return a.every((x,idx)=>x===b[idx]);
 	}
-	if(typeof a == 'function'){
-		return a.toString() == b.toString();
-	}
+
 
 	if(typeof a == 'object'){
 		if(Object.keys(a).length != Object.keys(b).length) return false;
