@@ -44,14 +44,9 @@ blueprints and comps each are unique in the tree
 
 console.log('xo loaded');
 
-let tree = {
-	//can bump this down  layer,
-	//this tree should only exist per render call
-		// need to build a nested render call, with an outside scope to hold the tree
-	'root':{
-		data: []
-	}
-};
+// let tree = {
+
+// };
 
 
 
@@ -176,7 +171,8 @@ const render = ($target, obj, leaf)=>{
 		xo.unmount(leaf, true);
 		return;
 	}
-	if(obj.isComp){
+	if(obj.type == 'comp'){
+		throw 'Not workng on comps yet';
 		//might be an issue tbh
 		//check the stored args only
 		executeComp($target, obj, leaf);
@@ -184,6 +180,7 @@ const render = ($target, obj, leaf)=>{
 		return xo.render($target, leaf.child, leaf)
 	}
 	if(obj.type == 'bp'){
+		console.log('here')
 
 		const bp = Library[obj.id];
 		//not same type, not same id,
@@ -191,66 +188,48 @@ const render = ($target, obj, leaf)=>{
 		if(obj.type !== leaf.type || leaf.id !== obj.id){
 			console.log('Draw blueprint');
 
-			// leaf.isBP = true;
-			// leaf.bp_id = obj.bp_id;
-			// leaf.$el    = draw($target, bp);
-			// leaf.children  = [];
-			//leaf.data  = []; //???
-
 			const $main = draw($target, bp);
+
+
+
 			leaf = {
-				...obj,
+				//...obj,
+				id : obj.id,
+				type : 'bp',
 				$el : $main,
 				children : obj.data.map((datum, idx)=>{
 					const {path, attr}=bp.slots[idx];
 					return {
-						type : 'data',
+						//type : 'data',
 						$el : path.reduce(($el, i)=>$el.childNodes[i], $main),
 						attr,
-						val : null
+						//val : null
 					}
 				})
 			}
 		}
 		obj.data.map((val, idx)=>{
-
-			//TODO: just map straihg tinto render
-			// no processing here
-
-
-
-			//const {path, attr} = bp.slots[idx];
-			//console.log('{path, attr}', {path, attr})
-
-			if(leaf.children[idx].val == val){
-				console.log('should skip');
-			}
-
-
-
-
-			if(val.bp_id || val.isComp){
-				const $targetEl = path.reduce(($el, i)=>$el.childNodes[i], leaf.$el); //make into func
-				if(!leaf.children[idx]) leaf.children[idx] = {};
-				return xo.render($targetEl, val, leaf.children[idx]);
-			}
-			if(!Utils.isSame(leaf.children[idx], val)){
-				BP.surgicalUpdate(leaf.$el, {path, attr}, val)
-				leaf.children[idx] = val;
-			}
+			const childLeaf = leaf.children[idx];
+			leaf.children[idx] = render(childLeaf.$el, val, childLeaf);
 		})
 		return leaf;
 	}
-	if(obj.type == 'data'){
-		// compare to the leaf here for old val
-		// if different, do an update, target el is stored within the leaf
-	}
-	//reanme this to isCollection or isArrOrObj
+
+
 	if(Array.isArray(obj) || Utils.isPlainObject(obj)){
 		throw 'List elements not supported yet'
 	}
-	throw `Given a non-parsable value into the renderer: ${obj}`;
 
+
+
+
+	if(!Utils.isSame2(obj, leaf.val)){ //TODO: use is same
+		leaf.val = obj;
+		leaf.type = 'data';
+		leaf.$el = update($target, leaf.attr, leaf.val);
+	}
+
+	return leaf;
 };
 
 const unmount = (leaf, shouldReplace=true)=>{
@@ -278,13 +257,11 @@ const mount = ()=>{
 const x = (strings, ...data)=>{
 	const blueprintId = Utils.hash(strings.join(''));
 	if(!Library[blueprintId]){
-		console.log(blueprintId)
 		Library[blueprintId] = Parser(strings);
 	}
-	console.log('LIB', Library)
 	return {
 		//...Library[blueprintId],
-		isBP : true,
+		//isBP : true,
 		type: 'bp',
 		id : blueprintId,
 		bp_id : blueprintId,
@@ -294,7 +271,7 @@ const x = (strings, ...data)=>{
 
 const draw = ($target, {slots, html, data, node})=>{
 	//const el = str2Dom(html);
-	console.log('DRAW', html, node, slots)
+	//console.log('DRAW', html, node, slots)
 	const el = node.cloneNode(true);
 	$target.replaceWith(el);
 	return el;
@@ -302,15 +279,14 @@ const draw = ($target, {slots, html, data, node})=>{
 
 
 // Rename
-const surgicalUpdate = ($target, slot, val)=>{ //might split slot to path and attr
-	console.log($target, slot.path)
-	const $el = slot.path.reduce(($el, i)=>$el.childNodes[i], $target);
-	console.log('update', $el, slot.attr, val)
+const update = ($target, attr, val)=>{
+	console.log('UPDATING', val)
 	if(typeof val === 'boolean'){
-		$el.toggleAttribute(slot.attr, val);
+		$target.toggleAttribute(attr, val);
 	}else{
-		$el[slot.attr] = val;
+		$target[attr] = val;
 	}
+	return $target;
 };
 
 
@@ -321,7 +297,7 @@ const xo = {
 	//TODO: this should eventually return the tree
 	render : ($target, obj, tree)=>{
 		tree = tree || {};
-		render($target, obj, tree);
+		tree = render($target, obj, tree);
 		return tree;
 	},
 

@@ -30,7 +30,7 @@
 <script>
 	const $root = document.getElementById('root');
 
-	const justBP = ()=>{
+	const justBP = (title='Just Blueprints')=>{
 
 		const foo = ()=>alert('yo');
 		const butt = x`<button onclick=${foo}>${'click4foo'}</button>`
@@ -40,7 +40,6 @@
 			<slot>${butt}</slot>
 		</div>`
 
-		const title='Just Blueprints'
 
 		return x`<div>
 			<h1>${title}</h1>
@@ -79,8 +78,12 @@
 
 
 
-	xo.render($root, justBP());
+	let tree = xo.render($root, justBP());
+	console.log(tree);
 	console.log('--------------------')
+
+	tree = xo.render($root, justBP('oh baby'), tree);
+	console.log(tree);
 
 
 	Debug(tree);

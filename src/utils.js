@@ -73,30 +73,24 @@ if(typeof x === 'function') return x;
 //Utils.execute = (v)=>typeof v=='function'?v():v;
 
 
+Utils.isCollection = (obj)=>Array.isArray(obj) || (obj && typeof obj == 'object' && obj.constructor == Object);
+
 Utils.isSame2 = (a,b)=>{
-	if(typeof a === 'undefined' || typeof b === 'undefined') return false;
-	if(a === b) return true;
-	if(typeof a !== typeof b) return false;
+	const compare = (a,b)=>{
+		if(typeof a === 'undefined' || typeof b === 'undefined') return false;
+		if(a === b) return true;
+		if(typeof a !== typeof b) return false;
+		if(typeof a == 'function') return a.toString() == b.toString();
+		return false;
+	};
 
-
-	if(typeof a == 'function'){
-		return a.toString() == b.toString();
+	if(Utils.isCollection(a) && Utils.isCollection(b)){
+		const eA = Object.entries(a), eB = Object.entries(b);
+		if(eA.length !== eB.length) return false;
+		return eA.every(([key,val])=>compare(val, b[key]));
 	}
 
-	//wrap above into a lambda function
-	//use isColelction below, and Object.entries
-
-	if(Array.isArray(a)){
-		if(a.length !== b.length) return false;
-		return a.every((x,idx)=>x===b[idx]);
-	}
-
-
-	if(typeof a == 'object'){
-		if(Object.keys(a).length != Object.keys(b).length) return false;
-		return Object.entries(a).every(([key,val])=>val===b[key])
-	}
-	return false;
+	return compare(a,b);
 };
 
 
@@ -127,6 +121,7 @@ const isSameTests = ()=>{
 	console.assert(!Utils.isSame2({a:true}, {a:false}));
 
 	console.assert(Utils.isSame2(()=>{}, ()=>{}));
+
 
 }
 
