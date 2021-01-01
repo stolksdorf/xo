@@ -11,10 +11,10 @@ TODO:
 	<title>component - xo test environment</title>
 
 	<script src='/src/utils.js'></script>
-	<script src='/src/xo.js'></script>
+	<script src='/src/debug.js'></script>
 
-	<script src='/src/blueprint.js'></script>
-	<script src='/src/library.cache.js'></script>
+	<script src='/src/parser.js'></script>
+	<script src='/src/xo.redux.js'></script>
 </head>
 <body>
 	<div id='root'>
@@ -22,14 +22,33 @@ TODO:
 	</div>
 
 	<hr />
-	<pre><code id='code'></code><pre>
+	<div style='display:flex'>
+		<pre><code id='tree'></code></pre>
+		<pre><code id='lib'></code></pre>
+	</div>
 </body>
 <script>
 	const $root = document.getElementById('root');
 
-	const Link = xo.comp(function(text, href){
-		return x`<a href=${href}>${text}</a>`
-	}, 'link');
+	const Link = xo.comp(function(text, href, newTab=false){
+		return x`<a href=${href} target=${newTab ? '_blank' : false}>${text}</a>`
+	});
+
+
+	const Counter = xo.comp(function(){
+		const [count, setCount] = this.useState(0);
+
+		console.log('setCount', setCount)
+		return x`<div>
+			${count}
+			<button onclick=${()=>{
+				console.log('clickj')
+				setCount(count+1)
+			}}>++</button>
+		</div>`
+	});
+
+
 
 	const Section = xo.comp(function(title){
 
@@ -43,35 +62,55 @@ TODO:
 			return ()=>{
 				console.log('oh bye.')
 			}
-		});
+		},[]);
 
 		// console.log('root', this.useState)
 		// delegateTest();
 
+		return x`<section>
+			<h3>${title}</h3>
+			${yo} <<>>
+			${Link('test', 'https://www.w3schools.com/Js/js_function_apply.asp', true)}
+		</section>`
+	});
+
+
+	const Main = xo.comp(function(title, show=true){
 		return x`<div>
 			<h1>${title}</h1>
-			<slot>${yo /*Link('test', 'https://www.w3schools.com/Js/js_function_apply.asp')*/}</slot>
-		</div>`
-	}, 'section');
+			${show && Section('nested!' + title)}
 
-
-	const Main = xo.comp(function(title){
-		return x`<div>
-			<h1>${title}</h1>
-			<slot>${Section('nested!')}</slot>
+			${Counter()}
 		</div>`
 
-	}, 'main');
+	});
+
+	let tree;
+
+	// tree = xo.render($root, Main('Oh Hello'));
+	// console.log(tree);
+	// console.log('--------------------')
+	// //setTimeout(()=>xo.render($root, Main('I have changed'), Tree), 3000);
 
 
-	xo.render($root, Main('Oh Hello'), Tree);
-	setTimeout(()=>xo.render($root, Main('I have changed'), Tree), 3000);
+	// tree = xo.render($root, Main('Oh Hello!'), tree);
+	// console.log(tree);
+	// console.log('--------------------')
 
-	console.log(Utils.normalize(tree))
-	setInterval(()=>{
-		//console.log(Tree)
-		document.getElementById('code').innerHTML = JSON.stringify(Utils.normalize(tree), null, '  ');
-	}, 500)
+	// tree = xo.render($root, Main('Title Change', false), tree);
+	// console.log(tree);
+
+
+	// console.log('--------------------')
+
+	// tree = xo.render($root, Main('Back', true), tree);
+	// console.log(tree);
+
+	tree = xo.render($root, Counter(), tree);
+	console.log(tree);
+
+
+	Debug(tree);
 
 </script>
 </html>

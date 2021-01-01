@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>unmount - xo test environment</title>
+
+	<script src='/src/utils.js'></script>
+	<script src='/src/debug.js'></script>
+
+	<script src='/src/parser.js'></script>
+	<script src='/src/xo.js'></script>
+
+
+	<script src='/src/library.cache.js'></script>
+</head>
+<body>
+	<div id='test'>
+		<div>yo</div>
+		hello
+	</div>
+	<div id='root'>
+		<div>[placeholder]</div>
+	</div>
+
+	<button x-id='button'>toggle</button>
+	<hr />
+	<div style='display:flex'>
+		<pre><code id='tree'></code></pre>
+		<pre><code id='lib'></code></pre>
+	</div>
+</body>
+<script>
+	const el = Array.from(document.querySelectorAll('[x-id]')).reduce((acc, x)=>{acc[x.getAttribute('x-id')]=x;return acc}, {});
+	console.log(el);
+
+	const $root = document.getElementById('root');
+
+	let count = 0;
+
+	const justBP = (title='Just Blueprints', flip=0)=>{
+
+		const foo = ()=>alert('yo');
+		const butt = x`<button onclick=${foo}>${'click4foo'}</button>`
+
+		let temp = x`<div>
+			<h1>${'here is a button'}</h1>
+			${butt}
+		</div>`
+
+
+		//if(flip) temp = x`<button>yo</button>`;
+		if(flip == 1) temp = false;
+		if(flip == 2) temp = 5;
+
+
+		return x`<div>
+			<h1>${title}</h1>
+			${temp}
+		</div>`
+	}
+
+
+	let tree = xo.render($root, justBP());
+	console.log(tree);
+	console.log('--------------------');
+
+
+	el.button.onclick = ()=>{
+		count++;
+		tree = xo.render($root, justBP('update!', count), tree);
+
+		//tree = xo.render($root, justBP('oh baby'), tree);
+		console.log(tree);
+
+	}
+	setTimeout(()=>{
+
+	}, 5000)
+
+	//el.button.onclick();
+
+
+	Debug(tree);
+
+</script>
+</html>

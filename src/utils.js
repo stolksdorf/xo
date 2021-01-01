@@ -23,6 +23,17 @@ function escapeHTML(str) {
 }
 
 
+Utils.listDiff = (a,b)=>{
+	//returns an object with two lists
+	// things from b to add to a
+	// things to remove from a
+
+		let setA = new Set(a), setB= new Set(b);
+		a.map(i=>{setB.delete(i)});
+		b.map(i=>{setA.delete(i)});
+		return {add:[...setA], del:[...setB]}
+}
+
 //remove
 Utils.normalize = (obj)=>{
 	if(obj instanceof HTMLElement){
