@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>lists - xo test environment</title>
+
+	<script src='/src/utils.js'></script>
+	<script src='/src/debug.js'></script>
+
+	<script src='/src/parser.js'></script>
+	<script src='/src/xo.js'></script>
+
+</head>
+<body>
+	<div id='test'>test</div>
+	<div id='root'>
+		<div>[placeholder]</div>
+	</div>
+
+	<hr />
+	<div style='display:flex'>
+		<pre><code id='tree'></code></pre>
+		<pre><code id='lib'></code></pre>
+	</div>
+</body>
+<script>
+
+	const $root = document.getElementById('root');
+
+	let tree;
+
+	const ItemC = xo.comp(function(init){
+		this.useEffect(()=>{
+			console.log('hello', init);
+			return ()=>console.log('bye', init);
+		},[]);
+		return x`<div>${init}</div>`;
+	})
+
+	const Item = function(init){
+		return x`<div>${init}</div>`
+	}
+
+	const List = xo.comp(function(flip=false){
+		if(flip){
+			return {
+				a: ItemC('a'),
+				b: ItemC('boo'),
+				c: ItemC('c')
+			}
+		};
+		return {
+			'0': ItemC(0),
+			'1': ItemC(1),
+			b: ItemC('b'),
+			//Item(2),
+			//ItemC(3)
+		}
+	});
+
+	tree = xo.render($root, List());
+	console.log('--------------------')
+
+	tree = xo.render($root, List(true), tree);
+	console.log('--------------------')
+
+	tree = xo.render($root, List(), tree);
+	console.log('--------------------')
+
+	Debug(tree);
+
+
+</script>
+</html>

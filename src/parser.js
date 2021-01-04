@@ -17,12 +17,13 @@ const createSlot = ()=>{
 
 const Parser = (htmlStrings)=>{
 	let dom = str2Dom(htmlStrings.join(PH)), slots = [];
-	const insertSlots = (el)=>{
-
-		if(el.nodeName == "#text" && el.nodeValue.indexOf(PH) !== -1){
+	const insertSlots = (el, onlyChild)=>{
+		const containsPlaceholder = el.nodeName == "#text" && el.nodeValue.indexOf(PH) !== -1;
+		const isOnlyPlaceholder = onlyChild && el.nodeValue.trim()===PH;
+		if(containsPlaceholder && !isOnlyPlaceholder){
 			el.replaceWith(...weave(el.nodeValue.split(PH), createSlot));
 		}
-		if(el.childNodes) Array.from(el.childNodes).map(insertSlots);
+		if(el.childNodes) Array.from(el.childNodes).map(cn=>insertSlots(cn, el.childNodes.length==1));
 	};
 	const parseElement = (el, path=[])=>{
 		if(el.nodeName == "#text" && el.nodeValue.trim() === PH){
@@ -64,8 +65,10 @@ const update = (el, attr='innerHTML', val)=>{
 	}
 	return el;
 };
-const x = (strings, ...data)=>{
+x = (strings, ...data)=>{
 	const key = Utils.hash(strings.join(''));
 	if(!Library[key]) Library[key] = Parser(strings);
-	return { type: 'bp', id : key, data, key }
+	return { type: 'bp', data, key,
+		id : key,
+	 }
 };

@@ -1,4 +1,5 @@
-const isList = (obj)=>obj && (Array.isArray(obj) || (typeof obj == 'object' && obj.constructor == Object));
+const isObj = (obj)=>!!obj && (typeof obj == 'object' && obj.constructor == Object);
+const isList = (obj)=>!!obj && (Array.isArray(obj) || isObj(obj));
 const isNone = (obj)=>typeof obj=='undefined'||obj===null||obj===false;
 
 const isSame = (a,b)=>{
@@ -24,15 +25,16 @@ const getType = (obj)=>{
 	return 'data';
 };
 const getKey = (obj, type)=>{
-	if(!type) type = getType(obj);
+	if(!type) type = getType(obj);  //might remove
 	if(type=='bp' || type=='comp') return obj.key;
-	if(type=='list') return Object.keys(obj).join('|');
+	if(type=='list') return true;//Object.keys(obj).join('|');
 	return true;
 };
 
 const types = {
 	bp : {
 		mount : (obj, node)=>{
+			//console.log('mount bp', obj)
 			const bp = Library[obj.key], el = draw(node.el, bp.dom);
 			node = {
 				type: 'bp', key : obj.key,
@@ -50,6 +52,7 @@ const types = {
 			return node;
 		},
 		render : (obj, node)=>{
+			//console.log('renering bp', obj)
 			obj.data.map((val, idx)=>{
 				node.children[idx] = render(val, node.children[idx])
 			});
@@ -58,9 +61,10 @@ const types = {
 	},
 	comp : {
 		mount : (obj, node)=>{
+			//console.log('mount comp', obj)
 			node = {
 				type : 'comp', key : obj.key,
-				effects : [], states : [],
+				effects : [], states : [], refs : {},
 				args : undefined,
 				child : { el : node.el },
 				el : node.el
@@ -76,7 +80,9 @@ const types = {
 		render : (obj, node)=>{
 			if(isListSame(obj.args, node.args)) return node;
 			node.args = obj.args;
+			//console.log('rendering comp', obj)
 			node.child = render(types.comp.execute(obj, node), node.child);
+			node.el = node.child.el;
 			return node;
 		},
 		execute : (obj, node)=>{
@@ -112,12 +118,65 @@ const types = {
 	//TODO
 	list : {
 		mount : (obj, node)=>{
-
+			//console.log('mount list')
+			node.el.innerHTML = '';
+			node = {
+				el : node.el,
+				key : true,
+				type : 'list',
+				children : {},
+			}
+			return node;
 		},
-		unmount : (obj, node)=>{
-
+		unmount : (node)=>{
+			//console.log('unmount list')
+			//console.log(node)
+			Object.values(node.children).map(unmount);
+			node = {el:node.el, attr:node.attr};
+			return node;
 		},
 		render : (obj, node)=>{
+			//console.log('render list')
+
+			//remove old first
+			Object.keys(node.children)
+				.filter(k=>typeof obj[k]==='undefined')
+				.map(key=>{
+					//console.log('removing', key);
+					unmount(node.children[key]);
+					node.children[key].el.remove();
+					delete node.children[key];
+				})
+
+			const nodes = Object.entries(obj).map(([key, val])=>{
+				if(!node.children[key]){
+					//console.log('adding', key)
+					node.children[key] = mount(val, {el : document.createElement('slot')});
+				}
+				//console.log('rendering', key)
+				node.children[key] = render(val, node.children[key]);
+
+				//console.log('___________')
+				return node.children[key].el;
+			});
+
+			nodes.map(n=>node.el.appendChild(n));
+
+
+			//console.log(node.el)
+
+
+
+
+			/*
+				get list of add and remove
+				//apply it
+				sort the list now?
+
+				Figure out if we need to re-arrange element in dom
+
+			*/
+			return node;
 
 		},
 	},
@@ -145,6 +204,8 @@ const render = (obj, node)=>{
 	const type = getType(obj), key = getKey(obj);
 	if(type !== node.type || key !== node.key){
 		node = types[node.type||'data'].unmount(node);
+
+		//Mutate the node here with el and attr? naah
 		node = types[type].mount(obj, node);
 	}
 	node = types[type].render(obj, node);
@@ -152,7 +213,8 @@ const render = (obj, node)=>{
 };
 
 const unmount = (node)=>{
-	node = types[getType(node)].unmount(node);
+	//console.log('UNMOUNT', node, getType(node))
+	node = types[node.type].unmount(node);
 	return node;
 };
 const mount = (obj, node)=>{
@@ -168,4 +230,11 @@ const xo = {
 		return (...args)=>{ return { type: 'comp', func, args, key }};
 	},
 	keymap : (arr, fn)=>Object.fromEntries(arr.map(fn)),
+	cx : (...args)=>{
+		return args.map((arg)=>{
+			if(Array.isArray(arg)) return xo.cx(...arg);
+			if(isObj(arg)) return Object.entries(arg).filter(([k,v])=>!!v).map(([k,v])=>k).join(' ');
+			return arg
+		}).join(' ');
+	}
 }
