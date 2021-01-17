@@ -1,13 +1,13 @@
 const isObj = (obj)=>!!obj && (typeof obj == 'object' && obj.constructor == Object);
 const isList = (obj)=>!!obj && (Array.isArray(obj) || isObj(obj));
-const isNone = (obj)=>typeof obj=='undefined'||obj===null||obj===false;
+const isNone = (obj)=>typeof obj=='undefined'||obj===null;
+const exe = (obj)=>typeof obj === 'function' ? obj() : obj;
+const undef = (obj)=>typeof obj === 'undefined';
 
 const isSame = (a,b)=>{
-	//if(typeof a === 'undefined' || typeof b === 'undefined') return false;
-	if(a === b) return true;
-	if(typeof a !== typeof b) return false;
-	//if(typeof a == 'function') return a.toString() == b.toString();
-	return false;
+	//TODO: this used to contain more intersting comparison logic, especially for functions
+	// Leaving it as a function to revisit later
+	return a===b;
 };
 const isListSame = (a,b)=>{
 	if(!isList(a)||!isList(b)) return false;
@@ -15,6 +15,8 @@ const isListSame = (a,b)=>{
 	if(A.length !== B.length) return false;
 	return A.every(k=>isSame(a[k], b[k]));
 };
+
+let x
 
 const TYPE = Symbol();
 const KEY = Symbol();
@@ -34,14 +36,13 @@ const getKey = (obj, type)=>{
 const types = {
 	bp : {
 		mount : (obj, node)=>{
-			//console.log('mount bp', obj)
 			const bp = Library[obj.key], el = draw(node.el, bp.dom);
 			node = {
 				type: 'bp', key : obj.key,
 				el,
 				children: obj.data.map((datum, idx)=>{
 					const {path, attr}=bp.slots[idx];
-					return { el : extract(el, path), attr }
+					return { el : extract(el, path), attr };
 				})
 			};
 			return node;
@@ -52,7 +53,6 @@ const types = {
 			return node;
 		},
 		render : (obj, node)=>{
-			//console.log('renering bp', obj)
 			obj.data.map((val, idx)=>{
 				node.children[idx] = render(val, node.children[idx])
 			});
@@ -61,7 +61,6 @@ const types = {
 	},
 	comp : {
 		mount : (obj, node)=>{
-			//console.log('mount comp', obj)
 			node = {
 				type : 'comp', key : obj.key,
 				effects : [], states : [], refs : {},
@@ -80,7 +79,6 @@ const types = {
 		render : (obj, node)=>{
 			if(isListSame(obj.args, node.args)) return node;
 			node.args = obj.args;
-			//console.log('rendering comp', obj)
 			node.child = render(types.comp.execute(obj, node), node.child);
 			node.el = node.child.el;
 			return node;
@@ -90,10 +88,11 @@ const types = {
 			const scope = {
 				useState : (init)=>{
 					let idx = stateCounter++;
-					if(typeof node.states[idx] === 'undefined') node.states[idx] = init;
+					if(typeof node.states[idx] === 'undefined') node.states[idx] = exe(init);
 					return [node.states[idx], (val)=>{
 						node.states[idx] = val;
-						scope.forceRender();
+						node.args = undefined;
+						node = render(obj, node);
 					}];
 				},
 				//CLEANUP
@@ -115,69 +114,38 @@ const types = {
 			return obj.func.apply(scope, obj.args);
 		}
 	},
-	//TODO
 	list : {
 		mount : (obj, node)=>{
-			//console.log('mount list')
 			node.el.innerHTML = '';
 			node = {
-				el : node.el,
-				key : true,
+				el : node.el, key : true,
 				type : 'list',
 				children : {},
 			}
 			return node;
 		},
 		unmount : (node)=>{
-			//console.log('unmount list')
-			//console.log(node)
 			Object.values(node.children).map(unmount);
 			node = {el:node.el, attr:node.attr};
 			return node;
 		},
 		render : (obj, node)=>{
-			//console.log('render list')
-
-			//remove old first
 			Object.keys(node.children)
 				.filter(k=>typeof obj[k]==='undefined')
 				.map(key=>{
-					//console.log('removing', key);
 					unmount(node.children[key]);
 					node.children[key].el.remove();
 					delete node.children[key];
 				})
-
 			const nodes = Object.entries(obj).map(([key, val])=>{
-				if(!node.children[key]){
-					//console.log('adding', key)
+				if(undef(node.children[key])){
 					node.children[key] = mount(val, {el : document.createElement('slot')});
 				}
-				//console.log('rendering', key)
 				node.children[key] = render(val, node.children[key]);
-
-				//console.log('___________')
 				return node.children[key].el;
 			});
-
-			nodes.map(n=>node.el.appendChild(n));
-
-
-			//console.log(node.el)
-
-
-
-
-			/*
-				get list of add and remove
-				//apply it
-				sort the list now?
-
-				Figure out if we need to re-arrange element in dom
-
-			*/
+			nodes.map(n=>node.el.appendChild(n)); //bump into loop above
 			return node;
-
 		},
 	},
 	data : {
@@ -204,8 +172,6 @@ const render = (obj, node)=>{
 	const type = getType(obj), key = getKey(obj);
 	if(type !== node.type || key !== node.key){
 		node = types[node.type||'data'].unmount(node);
-
-		//Mutate the node here with el and attr? naah
 		node = types[type].mount(obj, node);
 	}
 	node = types[type].render(obj, node);
@@ -222,7 +188,7 @@ const mount = (obj, node)=>{
 	return node;
 };
 
-const xo = {
+xo = {
 	render : (targetEl, obj, tree)=>render(obj, tree || { el : targetEl }),
 	x,
 	comp : (func)=>{
@@ -237,4 +203,24 @@ const xo = {
 			return arg
 		}).join(' ');
 	}
+};
+
+const isServerSide = typeof window === 'undefined';
+if(isServerSide){
+	xo.x = (strings, ...data)=>{return {type:'bp', strings, data}};
+	xo.render = (obj)=>{
+		if(obj && obj.type=='bp') return obj.strings.reduce((acc,str,idx)=>acc+str+xo.render(obj.data[idx]||''),'');
+		if(isList(obj)) return Object.values(obj).map(xo.render).join('\n');
+		if(typeof obj == 'function') return '';
+		return obj;
+	};
+	xo.comp = (func)=>{
+		return func.bind({
+			useState : (init)=>{return [init,()=>{}]},
+			useEffect :(func)=>func(), //maybe no-op, double check react docs on useEffect on serverside render
+			forceRender : ()=>{}
+		})
+	}
 }
+
+if(typeof module !== 'undefined') module.exports = xo;
