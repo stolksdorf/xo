@@ -1,6 +1,6 @@
 {
-  "name": "XO",
-  "version": "1.0.0",
+  "name": "xo",
+  "version": "0.0.0",
   "description": "",
   "main": "src/xo.js",
   "directories": {
@@ -12,15 +12,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stolksdorf/XO.git"
+    "url": "git+https://github.com/stolksdorf/xo.git"
   },
   "keywords": [],
   "author": "stolksdorf",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/stolksdorf/XO/issues"
+    "url": "https://github.com/stolksdorf/xo/issues"
   },
-  "homepage": "https://github.com/stolksdorf/XO#readme",
+  "homepage": "https://github.com/stolksdorf/xo#readme",
   "devDependencies": {
     "live-server": "^1.2.1"
   }

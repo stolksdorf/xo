@@ -1,8 +1,11 @@
 const isObj = (obj)=>!!obj && (typeof obj == 'object' && obj.constructor == Object);
 const isList = (obj)=>!!obj && (Array.isArray(obj) || isObj(obj));
 const isNone = (obj)=>typeof obj=='undefined'||obj===null;
-const exe = (obj)=>typeof obj === 'function' ? obj() : obj;
+const exe = (obj,...args)=>typeof obj === 'function' ? obj(...args) : obj;
 const undef = (obj)=>typeof obj === 'undefined';
+
+const hash = (str)=>[...str].reduce((acc, char)=>{acc = ((acc<<5)-acc)+char.charCodeAt(0);return acc&acc; }, 0).toString(32);
+
 
 const isSame = (a,b)=>{
 	//TODO: this used to contain more intersting comparison logic, especially for functions
@@ -16,12 +19,97 @@ const isListSame = (a,b)=>{
 	return A.every(k=>isSame(a[k], b[k]));
 };
 
-let x
+
+Library = (window || {}).Library || {};
+
+const dp = new DOMParser();
+const PH = String.fromCharCode(7);
+
+const str2Dom = (str)=>dp.parseFromString(str, 'text/html').querySelector('body').children[0];
+const weave = (arr, func)=>{
+	return arr.reduce((acc, val, idx)=>{
+		return (idx < arr.length-1) ? acc.concat(val, func(acc.length + 1)) : acc.concat(val)
+	},[])
+};
+const createSlot = ()=>{
+	const temp = document.createElement('slot'); //flip back to 'slot'
+	temp.innerHTML = PH;
+	return temp;
+};
+
+const Parser = (htmlStrings)=>{
+	let dom = str2Dom(htmlStrings.join(PH)), slots = [];
+	const insertSlots = (el, onlyChild)=>{
+		const containsPlaceholder = el.nodeName == "#text" && el.nodeValue.indexOf(PH) !== -1;
+		const isOnlyPlaceholder = onlyChild && el.nodeValue.trim()===PH;
+		if(containsPlaceholder && !isOnlyPlaceholder){
+			el.replaceWith(...weave(el.nodeValue.split(PH), createSlot));
+		}
+		if(el.childNodes) Array.from(el.childNodes).map(cn=>insertSlots(cn, el.childNodes.length==1));
+	};
+	const parseElement = (el, path=[])=>{
+		if(el.nodeName == "#text" && el.nodeValue.trim() === PH){
+			slots.push({ attr : 'innerHTML', path : path.slice(0,-1) });
+			el.nodeValue='';
+		}
+		Array.from(el.attributes||[])
+			.map(({name, value})=>{
+				if(value.indexOf(PH) == -1) return;
+				if(value !== PH) throw `Element attribute '${name}' is overloaded`;
+				slots.push({ path, attr: name });
+				el.removeAttribute(name);
+			});
+		Array.from(el.childNodes||[])
+			.map((child, idx)=>parseElement(child, path.concat(idx)))
+	}
+	insertSlots(dom);
+	parseElement(dom);
+	return { slots, dom };
+};
+
+const extract = (el, path)=>path.reduce((e,i)=>e.childNodes[i],el);
+const draw = (el, node)=>{
+	const temp = node.cloneNode(true);
+	el.replaceWith(temp);
+	return temp;
+};
+const update = (el, attr='innerHTML', val)=>{
+	if(attr=='innerHTML'){
+		el.innerHTML = (!val&&val!==0) ? '' : val;
+	}else if(attr=='class'){
+		el.classList = val
+	}else{
+		if(typeof val === 'boolean'){
+			el.toggleAttribute(attr, val)
+		}else{
+			el[attr] = val;
+		}
+	}
+	return el;
+};
+window.x = (strings, ...data)=>{
+	const key = hash(strings.join(PH));
+	if(!Library[key]) Library[key] = Parser(strings);
+	return { type: 'bp', data, key,
+		id : key,
+	 }
+};
+
+
+
+
+
+
+
+
+
+
 
 const TYPE = Symbol();
 const KEY = Symbol();
 
 const getType = (obj)=>{
+	if(!obj) return 'data';
 	if(obj.type=='bp'||obj.type=='comp') return obj.type;
 	if(isList(obj)) return 'list';
 	return 'data';
@@ -81,37 +169,91 @@ const types = {
 			node.args = obj.args;
 			node.child = render(types.comp.execute(obj, node), node.child);
 			node.el = node.child.el;
+
+			node.effects.map((eff, idx)=>{
+				if(eff.flag){
+					node.effects[idx].flag = false;
+					node.effects[idx].cleanup = eff.func();
+				}
+			})
+
 			return node;
 		},
+		//could move out
 		execute : (obj, node)=>{
 			let stateCounter=0,effectCounter=0;
-			const scope = {
-				useState : (init)=>{
+			// const scope = {
+			// 	refs : node.refs,
+			// 	useState : (init)=>{
+			// 		let idx = stateCounter++;
+			// 		if(undef(node.states[idx])) node.states[idx] = exe(init);
+			// 		return [node.states[idx], (val)=>{
+			// 			node.states[idx] = val;
+			// 			//scope.forceRender();
+			// 			node.args = undefined;
+			// 			node = render(obj, node);
+			// 		}];
+			// 	},
+			// 	//CLEANUP
+			// 	useEffect:(func, args)=>{
+			// 		let idx = effectCounter++;
+			// 		if(!node.effects[idx]){
+			// 			node.effects[idx] = {
+			// 				args, func,
+			// 				cleanup:null,
+			// 				flag : true,
+			// 			};
+			// 		}
+			// 		//if(!node.effects[idx]){
+			// 		//	node.effects[idx] = { args, cleanup : func() }
+			// 		//}else if(!isListSame(args, node.effects[idx].args)){
+			// 		if(!isListSame(args, node.effects[idx].args)){
+			// 			exe(node.effects[idx].cleanup);
+			// 			node.effects[idx].flag = true;
+			// 		}
+			// 	},
+			// 	forceRender : ()=>{
+			// 		node.args = undefined;
+			// 		node = render(obj, node);
+			// 	},
+			// 	el : node.el
+			// };
+
+
+			node.useState = (init)=>{
 					let idx = stateCounter++;
-					if(typeof node.states[idx] === 'undefined') node.states[idx] = exe(init);
+					if(undef(node.states[idx])) node.states[idx] = exe(init);
 					return [node.states[idx], (val)=>{
 						node.states[idx] = val;
+						//scope.forceRender();
 						node.args = undefined;
 						node = render(obj, node);
 					}];
-				},
-				//CLEANUP
-				useEffect:(func, args)=>{
+				};
+			node.useEffect=(func, args)=>{
 					let idx = effectCounter++;
 					if(!node.effects[idx]){
-						node.effects[idx] = { args, cleanup : func() }
-					}else if(!isListSame(args, node.effects[idx].args)){
-						node.effects[idx].cleanup && node.effects[idx].cleanup();
-						node.effects[idx] = { args, cleanup : func() }
+						node.effects[idx] = {
+							args, func,
+							cleanup:null,
+							flag : true,
+						};
 					}
-				},
-				forceRender : ()=>{
+					//if(!node.effects[idx]){
+					//	node.effects[idx] = { args, cleanup : func() }
+					//}else if(!isListSame(args, node.effects[idx].args)){
+					if(!isListSame(args, node.effects[idx].args)){
+						exe(node.effects[idx].cleanup);
+						node.effects[idx].flag = true;
+					}
+				}
+			node.forceRender = ()=>{
 					node.args = undefined;
 					node = render(obj, node);
-				},
-				el : node.el
-			};
-			return obj.func.apply(scope, obj.args);
+				}
+
+
+			return obj.func.apply(node, obj.args);
 		}
 	},
 	list : {
@@ -131,7 +273,7 @@ const types = {
 		},
 		render : (obj, node)=>{
 			Object.keys(node.children)
-				.filter(k=>typeof obj[k]==='undefined')
+				.filter(k=>undef(obj[k]))
 				.map(key=>{
 					unmount(node.children[key]);
 					node.children[key].el.remove();
@@ -190,9 +332,9 @@ const mount = (obj, node)=>{
 
 xo = {
 	render : (targetEl, obj, tree)=>render(obj, tree || { el : targetEl }),
-	x,
+	x : window.x,
 	comp : (func)=>{
-		const key = Utils.hash(func.toString());
+		const key = hash(func.toString());
 		return (...args)=>{ return { type: 'comp', func, args, key }};
 	},
 	keymap : (arr, fn)=>Object.fromEntries(arr.map(fn)),

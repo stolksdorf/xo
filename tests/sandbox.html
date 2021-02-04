@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>xo testing</title>
+	<script src='../src/parser.js'></script>
+	<script src='../src/xo.js'></script>
+</head>
+<body>
+	<div id='root'></div>
+</body>
+<script>
+	root = document.getElementById('root');
+
+	xo.render(root, x`<div>${undefined}</div>`)
+</script>
+</html>

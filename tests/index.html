@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>xo testing</title>
+	<script src='../src/parser.js'></script>
+	<script src='../src/xo.js'></script>
+</head>
+<body>
+	<div id='root'></div>
+</body>
+<script>
+	tree = {};
+	tests = {};
+	root = document.getElementById('root');
+</script>
+
+<!-- Test Links Here -->
+<script src='/tests/parser.test.js'></script>
+<script src='/tests/blueprint.test.js'></script>
+<script src='/tests/state.test.js'></script>
+<script src='/tests/effects.test.js'></script>
+
+
+
+<script>
+	const same = (a,b)=>{
+		if(typeof a==='object') return Object.entries(a).every(([k,v])=>same(v,b[k]));
+		return a===b;
+	}
+	const harness={
+		is : (a,b)=>{ if(!same(a,b)){ throw `${a} does not equal ${b}`} }
+	};
+
+	let allPassing = true;
+	const runTest = (obj, name='tests', indent='')=>{
+		if(name[0]=='_') return console.log(`${indent}${name} ⏸`);
+		if(typeof obj !== 'function'){
+			console.log(`${indent}${name}:`);
+			return Object.entries(obj).map(([k,v])=>{ runTest(v,k,indent+'  '); });
+		}
+		try{
+			obj(harness);
+			console.log(`${indent}✅ ${name}`)
+		}catch(err){
+			allPassing = false;
+			console.log(`${indent}❌ ${name}`);
+			console.log(err);
+		}
+	}
+	runTest(tests);
+	//alert(allPassing?'All Passed!':'ERRORS');
+</script>
+</html>
