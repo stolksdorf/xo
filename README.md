@@ -14,6 +14,14 @@ features
 
 
 
+### Bugs to fix
+
+- Single child component eating parent in parser
+- Be able to return multi-elements in a single blueprint
+
+
+
+
 
 
 

@@ -4,6 +4,8 @@ const isNone = (obj)=>typeof obj=='undefined'||obj===null;
 const exe = (obj,...args)=>typeof obj === 'function' ? obj(...args) : obj;
 const undef = (obj)=>typeof obj === 'undefined';
 
+const isServerSide = typeof window === 'undefined';
+
 const hash = (str)=>[...str].reduce((acc, char)=>{acc = ((acc<<5)-acc)+char.charCodeAt(0);return acc&acc; }, 0).toString(32);
 
 
@@ -20,12 +22,15 @@ const isListSame = (a,b)=>{
 };
 
 
-Library = (window || {}).Library || {};
+Library = (isServerSide ? global : window).Library || {};
 
-const dp = new DOMParser();
+let dp
 const PH = String.fromCharCode(7);
 
-const str2Dom = (str)=>dp.parseFromString(str, 'text/html').querySelector('body').children[0];
+const str2Dom = (str)=>{
+	if(!dp) dp = new DOMParser();
+	return dp.parseFromString(str, 'text/html').querySelector('body').children[0];
+}
 const weave = (arr, func)=>{
 	return arr.reduce((acc, val, idx)=>{
 		return (idx < arr.length-1) ? acc.concat(val, func(acc.length + 1)) : acc.concat(val)
@@ -87,15 +92,6 @@ const update = (el, attr='innerHTML', val)=>{
 	}
 	return el;
 };
-window.x = (strings, ...data)=>{
-	const key = hash(strings.join(PH));
-	if(!Library[key]) Library[key] = Parser(strings);
-	return { type: 'bp', data, key,
-		id : key,
-	 }
-};
-
-
 
 
 
@@ -138,6 +134,7 @@ const types = {
 		unmount : (node)=>{
 			node.children.map(unmount);
 			node = {el:node.el, attr:node.attr};
+			node.el = draw(node.el, document.createElement('slot'));
 			return node;
 		},
 		render : (obj, node)=>{
@@ -332,7 +329,13 @@ const mount = (obj, node)=>{
 
 xo = {
 	render : (targetEl, obj, tree)=>render(obj, tree || { el : targetEl }),
-	x : window.x,
+	x : (strings, ...data)=>{
+		const key = hash(strings.join(PH));
+		if(!Library[key]) Library[key] = Parser(strings);
+		return { type: 'bp', data, key,
+			id : key,
+		 }
+	},
 	comp : (func)=>{
 		const key = hash(func.toString());
 		return (...args)=>{ return { type: 'comp', func, args, key }};
@@ -347,7 +350,7 @@ xo = {
 	}
 };
 
-const isServerSide = typeof window === 'undefined';
+
 if(isServerSide){
 	xo.x = (strings, ...data)=>{return {type:'bp', strings, data}};
 	xo.render = (obj)=>{
@@ -359,7 +362,7 @@ if(isServerSide){
 	xo.comp = (func)=>{
 		return func.bind({
 			useState : (init)=>{return [init,()=>{}]},
-			useEffect :(func)=>func(), //maybe no-op, double check react docs on useEffect on serverside render
+			useEffect :(func)=>null, //maybe no-op, double check react docs on useEffect on serverside render
 			forceRender : ()=>{}
 		})
 	}

@@ -13,5 +13,21 @@ tests.parser = {
 		t.is(Library[foo.key].slots[0], {path : [0], attr:'id'})
 		t.is(Library[foo.key].slots[1], {path : [0], attr:'onclick'})
 		t.is(Library[foo.key].dom.outerHTML, '<div></div>')
+	},
+
+	singleEmbed : (t)=>{
+
+		const foo = x`<section>
+			oh hello
+
+			<div class='lower'>
+				${x`<div>test</div>`}
+			</div>
+		</section>`
+
+		//lower should exist
+		// maybe try with a component
+
+
 	}
 }
