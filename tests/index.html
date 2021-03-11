@@ -28,16 +28,35 @@
 		return a===b;
 	}
 	const harness={
-		is : (a,b)=>{ if(!same(a,b)){ throw `${a} does not equal ${b}`} }
+		is : (a,b)=>{ if(!same(a,b)){ throw `${a} does not equal ${b}`} },
+		throws : (fn)=>{
+			let shouldThrow = false;
+			try{ fn(); shouldThrow = true; }catch(err){}
+			if(shouldThrow) throw 'Test should throw error';
+		}
 	};
+
+	let hasOnlyFlag = false
+	const checkOnly = (group)=>{
+		if(hasOnlyFlag) return;
+		Object.entries(group).map(([key, val])=>{
+			if(key[0]=='$') hasOnlyFlag = true;
+			if(typeof val === 'object') checkOnly(val);
+		});
+	};
+	checkOnly(tests);
+
+	window.x = xo.x;
+
 
 	let allPassing = true;
 	const runTest = (obj, name='tests', indent='')=>{
-		if(name[0]=='_') return console.log(`${indent}${name} ⏸`);
+		if(name[0]=='_') return console.log(`${indent}⏸ ${name}`);
 		if(typeof obj !== 'function'){
 			console.log(`${indent}${name}:`);
 			return Object.entries(obj).map(([k,v])=>{ runTest(v,k,indent+'  '); });
 		}
+		if(hasOnlyFlag && name[0]!=='$') return console.log(`${indent}⏸ ${name}`);
 		try{
 			obj(harness);
 			console.log(`${indent}✅ ${name}`)

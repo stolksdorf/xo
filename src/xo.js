@@ -29,7 +29,10 @@ const PH = String.fromCharCode(7);
 
 const str2Dom = (str)=>{
 	if(!dp) dp = new DOMParser();
-	return dp.parseFromString(str, 'text/html').querySelector('body').children[0];
+	//return dp.parseFromString(str, 'text/html').querySelector('body').children[0];
+	const body = dp.parseFromString(str, 'text/html').querySelector('body')
+	if(body.children.length > 1) throw 'Multiple top level elements were returned in blueprint';
+	return body.children[0];
 }
 const weave = (arr, func)=>{
 	return arr.reduce((acc, val, idx)=>{
@@ -37,16 +40,18 @@ const weave = (arr, func)=>{
 	},[])
 };
 const createSlot = ()=>{
-	const temp = document.createElement('slot'); //flip back to 'slot'
+	const temp = document.createElement('slot');
 	temp.innerHTML = PH;
 	return temp;
 };
 
 const Parser = (htmlStrings)=>{
 	let dom = str2Dom(htmlStrings.join(PH)), slots = [];
+	//TODO: remove only child check, don't need it any more
 	const insertSlots = (el, onlyChild)=>{
 		const containsPlaceholder = el.nodeName == "#text" && el.nodeValue.indexOf(PH) !== -1;
-		const isOnlyPlaceholder = onlyChild && el.nodeValue.trim()===PH;
+		//const isOnlyPlaceholder = onlyChild && el.nodeValue.trim()===PH;
+		const isOnlyPlaceholder = false;
 		if(containsPlaceholder && !isOnlyPlaceholder){
 			el.replaceWith(...weave(el.nodeValue.split(PH), createSlot));
 		}
@@ -171,6 +176,7 @@ const types = {
 				if(eff.flag){
 					node.effects[idx].flag = false;
 					node.effects[idx].cleanup = eff.func();
+					//WARNING: effect args are not being set?
 				}
 			})
 
@@ -221,6 +227,7 @@ const types = {
 					let idx = stateCounter++;
 					if(undef(node.states[idx])) node.states[idx] = exe(init);
 					return [node.states[idx], (val)=>{
+						if(node.states[idx] === val) return;
 						node.states[idx] = val;
 						//scope.forceRender();
 						node.args = undefined;
@@ -269,6 +276,9 @@ const types = {
 			return node;
 		},
 		render : (obj, node)=>{
+
+			//Move this process to mount
+			// create a key based on the keys used in the list
 			Object.keys(node.children)
 				.filter(k=>undef(obj[k]))
 				.map(key=>{
@@ -293,7 +303,14 @@ const types = {
 				type : 'data', key : true,
 				el   : node.el, attr : node.attr,
 				val  : Symbol()
+			};
+
+			//nested bug fix?
+			if(node.attr == 'innerHTML' || undef(node.attr)){
+				node.el = draw(node.el, document.createTextNode(''));
+				node.attr = 'textContent';
 			}
+			node.key = node.attr;
 			return node;
 		},
 		unmount : (node)=>node,
@@ -308,6 +325,7 @@ const types = {
 };
 
 const render = (obj, node)=>{
+	//console.log('render', obj, node)
 	const type = getType(obj), key = getKey(obj);
 	if(type !== node.type || key !== node.key){
 		node = types[node.type||'data'].unmount(node);
