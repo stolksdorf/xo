@@ -79,12 +79,15 @@ const Parser = (htmlStrings)=>{
 
 const extract = (el, path)=>path.reduce((e,i)=>e.childNodes[i],el);
 const draw = (el, node)=>{
+	console.log('drawing', node)
 	const temp = node.cloneNode(true);
 	el.replaceWith(temp);
 	return temp;
 };
 const update = (el, attr='innerHTML', val)=>{
+	console.log('update', el, attr, val)
 	if(attr=='innerHTML'){
+		console.log('HJERE')
 		el.innerHTML = (!val&&val!==0) ? '' : val;
 	}else if(attr=='class'){
 		el.classList = val
@@ -100,7 +103,7 @@ const update = (el, attr='innerHTML', val)=>{
 
 
 
-
+/* ------------------------------------------------------------------- */
 
 
 
@@ -137,6 +140,7 @@ const types = {
 			return node;
 		},
 		unmount : (node)=>{
+			console.log('here')
 			node.children.map(unmount);
 			node = {el:node.el, attr:node.attr};
 			node.el = draw(node.el, document.createElement('slot'));
@@ -151,12 +155,17 @@ const types = {
 	},
 	comp : {
 		mount : (obj, node)=>{
+			console.log('mounting', obj, node)
 			node = {
 				type : 'comp', key : obj.key,
 				effects : [], states : [], refs : {},
 				args : undefined,
 				child : { el : node.el },
-				el : node.el
+				el : node.el,
+
+
+
+				func : obj.func
 			};
 			return node;
 		},
@@ -256,12 +265,12 @@ const types = {
 					node = render(obj, node);
 				}
 
-
 			return obj.func.apply(node, obj.args);
 		}
 	},
 	list : {
 		mount : (obj, node)=>{
+			console.log('list mount')
 			node.el.innerHTML = '';
 			node = {
 				el : node.el, key : true,
@@ -271,29 +280,214 @@ const types = {
 			return node;
 		},
 		unmount : (node)=>{
+			console.log('list unmount')
 			Object.values(node.children).map(unmount);
 			node = {el:node.el, attr:node.attr};
 			return node;
 		},
-		render : (obj, node)=>{
 
-			//Move this process to mount
-			// create a key based on the keys used in the list
-			Object.keys(node.children)
-				.filter(k=>undef(obj[k]))
-				.map(key=>{
-					unmount(node.children[key]);
-					node.children[key].el.remove();
+		render : (obj, node)=>{
+			// console.log('HERE1', Object.entries(node.children));
+
+
+			// const old = Object.entries(node.children);
+			// const fresh = Object.entries(obj);
+
+			// console.log('old', old);
+			// console.log('fresh', fresh)
+
+
+			const sameKeys = Object.entries(node.children).reduce((acc, [key, child])=>{
+				if(undef(obj[key])){ //Does not exist in the new list
+					unmount(child);
+					child.el.remove();
 					delete node.children[key];
-				})
-			const nodes = Object.entries(obj).map(([key, val])=>{
-				if(undef(node.children[key])){
-					node.children[key] = mount(val, {el : document.createElement('slot')});
+					console.log('removing', key)
+				}else{
+					acc.push(key)
 				}
-				node.children[key] = render(val, node.children[key]);
-				return node.children[key].el;
+				return acc;
+			}, []);
+
+			console.log('SAME KEYS', sameKeys);
+
+			console.log('HERE2', Object.entries(node.children));
+
+			let newList = {}
+			Object.entries(obj).map(([key, val], idx)=>{
+				if(undef(node.children[key])){
+					newList[key] = mount(val, {el : document.createElement('li')}); //Switch back to slot
+					newList[key] = render(val, newList[key]);
+				}else{
+					newList[key] = render(val, node.children[key]);
+				}
+
+
+				const sameElement = node.el.childNodes[idx] == newList[key].el;
+
+				if(!sameElement){
+					console.log('not same', key, newList[key]);
+
+					console.log('inserting', newList[key].el, node.el.childNodes[idx+1] || null)
+
+					node.el.insertBefore(newList[key].el, node.el.childNodes[idx+1] || null);
+				}else{
+					console.log('same elements!')
+				}
 			});
-			nodes.map(n=>node.el.appendChild(n)); //bump into loop above
+
+			// console.log('newList', newList);
+
+			// Object.entries(newList).map(([key, val], idx)=>{
+			// 	console.log('HERE', node.el.childNodes)
+
+			// 	const sameElement = node.el.childNodes[idx] == val.el;
+
+			// 	if(!sameElement){
+			// 		console.log('not same', key, val);
+
+			// 		console.log('inserting', val.el, node.el.childNodes[idx+1] || null)
+			// 		console.log('CHECK', node.el.insertBefore(val.el, node.el.childNodes[idx+1] || null));
+			// 	}else{
+			// 		console.log('same elements!')
+			// 	}
+			// 	//newList[key] = render(val, newList[key]);
+			// });
+
+			console.log(newList)
+
+			node.children = newList;
+
+
+			/*
+				Loop thorugh and add missing elements
+				build the new resulting list
+
+
+				loop through new list with idx
+				check for el equivency with the actual child nodes
+				=if diff, insertBefore
+
+			*/
+
+
+
+			/*
+				- Loop through fresh (idx)
+				- I want to add a new element
+				- I need to find where it's sibling is
+				- so I request it from find_sibling(idx+1)
+					- find_sibling looks into fresh at given idx
+						- if doesn't exist return null
+					- sees if it's key exists in old
+					- if not
+						- create a new element, mount it, and use insertBefore using it's sibling (call find_sibling(idx+1))
+						- add to result
+					- if yes
+						- does it have the same idx as the fresh idx?
+						- if yes
+							- return
+
+					- if so returns it's corresponding element
+
+
+			*/
+
+
+/*
+
+			let result = {};
+
+			fresh.map(([key, val], idx)=>{
+
+				const isNewElement = !node.children[key];
+
+				if(isNewElement){
+					console.log('mount node')
+					result[key] = mount(val, {el : document.createElement('slot')});
+
+					let sibling = fresh[idx+1];
+					if(sibling){
+						const sib_key = sibling[0];
+						const existing_sib = node.children[sib_key]
+
+					}
+
+
+
+					result[key] = render(val, result[key]);
+				}else{
+					console.log(key, val, node.children[key])
+
+					result[key] = render(val, node.children[key]);
+				}
+
+
+
+
+
+				// if(key !== old_key){
+
+
+
+				// 	result[key] = render(val, node.children[key]);
+
+				// }
+
+			})
+
+			node.children = result;
+
+
+
+
+
+			// const nodes = Object.entries(obj).map(([key, val])=>{
+			// 	const old
+
+
+			// //Move this process to mount
+			// // create a key based on the keys used in the list
+			// Object.keys(node.children)
+			// 	.filter(k=>undef(obj[k]))
+			// 	.map(key=>{
+			// 		console.log('unmoutning this key', key)
+			// 		unmount(node.children[key]);
+			// 		node.children[key].el.remove();
+			// 		delete node.children[key];
+			// 	})
+
+
+
+			/*
+				convert both to entries lists
+				loop through new, with idx
+				check key on new with old of same idx
+					if match, call render (or move on, we can render later)
+					if not match
+						if not in old
+							mount new node
+							insertBefore(new[idx+1]) // what if this doesn't exist in new node?!
+						if in old
+
+
+
+			*/
+
+
+			// const nodes = Object.entries(obj).map(([key, val])=>{
+			// 	console.log('nodes', key, val)
+
+			// 	if(undef(node.children[key])){
+			// 		console.log('mount node')
+			// 		node.children[key] = mount(val, {el : document.createElement('slot')});
+			// 	}
+			// 	node.children[key] = render(val, node.children[key]);
+			// 	return node.children[key].el;
+			// });
+
+			// //FIXME: THIS IS BAD DON"T BLINDING RE APPEND
+			// nodes.map(n=>node.el.appendChild(n)); //bump into loop above
 			return node;
 		},
 	},
@@ -307,6 +501,7 @@ const types = {
 
 			//nested bug fix?
 			if(node.attr == 'innerHTML' || undef(node.attr)){
+				console.log('draw hit')
 				node.el = draw(node.el, document.createTextNode(''));
 				node.attr = 'textContent';
 			}
@@ -327,7 +522,13 @@ const types = {
 const render = (obj, node)=>{
 	//console.log('render', obj, node)
 	const type = getType(obj), key = getKey(obj);
+
+	// console.log({
+	// 	type, key, node
+	// })
+
 	if(type !== node.type || key !== node.key){
+		console.log('unmounting', node.type)
 		node = types[node.type||'data'].unmount(node);
 		node = types[type].mount(obj, node);
 	}
