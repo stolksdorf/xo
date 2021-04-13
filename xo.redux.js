@@ -39,21 +39,18 @@ const unmount = (node)=>{
 	if(node.children){
 		Object.values(node.children).map(unmount);
 	}
-	node = {el:node.el, attr:node.attr};
 	if(getType(node) == 'bp'){
 		node.el = draw(node.el, document.createElement('slot'));
 	}
-	return node;
+	return {el:node.el, attr:node.attr};
 
 };
-
 
 const render = (obj, node)=>{
 	const type = getType(obj), key = getKey(obj);
 
 	if(type !== node.type || key !== node.key){
-		node = unmount(node);
-		node = mount(obj, node);
+		node = mount(obj, unmount(node));
 	}
 
 

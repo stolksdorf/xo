@@ -144,7 +144,7 @@ tests.list = {
 			t.is(tree.el.innerHTML, 'b')
 		},
 
-		$complex : (t)=>{
+		complex : (t)=>{
 			let render = { a:0,b:0,c:0,f:0,e:0 };
 			let unmount = { a:0,b:0,c:0,f:0,e:0 };
 			let mount = { a:0,b:0,c:0,f:0,e:0 };

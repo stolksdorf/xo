@@ -1,18 +1,35 @@
-x = window.x;
 tests.parser = {
 	basic : (t)=>{
 		const foo = x`<div></div>`;
 		t.is(foo.data, []);
-		t.is(Library[foo.key].slots, [])
-		t.is(Library[foo.key].dom.outerHTML, '<div></div>')
+		t.is(Archive[foo.key].slots, [])
+		t.is(Archive[foo.key].dom.outerHTML, '<div></div>')
 	},
 	attr : (t)=>{
 		const foo = x`<div id=${'test'} onclick=${()=>{}}></div>`;
 		t.is(foo.data[0], 'test');
-		t.is(Library[foo.key].slots.length, 2)
-		t.is(Library[foo.key].slots[0], {path : [0], attr:'id'})
-		t.is(Library[foo.key].slots[1], {path : [0], attr:'onclick'})
-		t.is(Library[foo.key].dom.outerHTML, '<div></div>')
+		t.is(Archive[foo.key].slots.length, 2)
+		t.is(Archive[foo.key].slots[0], {path : [0], attr:'id'})
+		t.is(Archive[foo.key].slots[1], {path : [0], attr:'onclick'})
+		t.is(Archive[foo.key].dom.outerHTML, '<div></div>')
+	},
+
+	select_tag : (t)=>{
+		const opts = {
+			a : '1',
+			b : '2',
+			c : '3',
+		}
+
+		const foo =x`<select>
+				${Object.entries(opts).map(([key, val])=>{
+					return x`<option value='${key}'>${val}</option>`
+				})}
+			</select>`;
+
+		console.log(foo.dom.outerHTML)
+
+		console.log(foo)
 	},
 
 	singleEmbed : (t)=>{
@@ -37,7 +54,7 @@ tests.parser = {
 			const res = x`<div>hello</div><div>world</div>`;
 		})
 	},
-	nested_bug : (t)=>{
+	$nested_bug : (t)=>{
 		// a single children seems to 'eat' it's parent
 		/*
 			This bug is due to a "fix" in the parser for when a slot is an only child
@@ -69,22 +86,39 @@ tests.parser = {
 
 		tree = xo.render(root, func('I am text'));
 
+
+		console.log('tree', JSON.stringify(tree, null, '  '))
+
 		t.is(tree.children[0].type, 'data');
 		t.is(tree.children[0].val, 'I am text');
-		t.is(tree.children[0].el.nodeName, '#text')
+		t.is(tree.children[0].el.nodeName, 'DIV');
 
 		tree = xo.render(root, func(x`<span>x</span>`), tree);
 
 
+		console.log('tree', JSON.stringify(tree, null, '  '))
+
 		t.is(tree.children[0].type, 'bp');
-		t.is(tree.children[0].el.outerHTML, '<span>x</span>')
+		//t.is(tree.children[0].el.outerHTML, '<span>x</span>')
 
 
-		tree = xo.render(root, func("I am more text"), tree);
+		console.log('-------------')
+
+		console.log('tree', JSON.stringify(tree, null, '  '))
+
+		tree = xo.render(root, func("I am more text!"), tree);
+
+		console.log(tree)
+
+
+
 
 		t.is(tree.children[0].type, 'data');
 		t.is(tree.children[0].val, 'I am more text');
-		t.is(tree.children[0].el.nodeName, '#text')
+		t.is(tree.children[0].el.nodeName, 'DIV')
+
+
+
 
 	}
 }

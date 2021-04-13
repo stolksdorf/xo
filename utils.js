@@ -2,9 +2,23 @@ const Utils = {
 
 }
 
+
+
+// Debug = (tree)=>{
+
+
+// 	setInterval(()=>{
+
+// 		document.getElementById('tree').innerHTML = JSON.stringify(Utils.normalize(tree), null, '  ');
+// 		document.getElementById('lib').innerHTML = JSON.stringify(Utils.normalize(Library), null, '  ');
+// 	}, 500)
+// };
+
 Utils.isPlainObject = (obj)=>obj && typeof obj == 'object' && obj.constructor == Object;
 
 Utils.shortid = (n=8)=>Array.from(new Array(n*1),(v,i)=>'23456789abcdefghijkmnpqrstuvwxyz'[Math.floor(Math.random()*32)]).join('');
+
+
 
 Utils.hash = (str)=>{
 	return [...str].reduce((acc, char)=>{
@@ -13,7 +27,32 @@ Utils.hash = (str)=>{
 	}, 0)
 };
 
+
+
+
+
+
+
+
+
+Utils.bp2str = (bp)=>{
+const el = (bp.dom || bp.el).cloneNode(true);
+	bp.slots.map((slot, idx)=>{
+		xo.parser.update(xo.parser.extract(el,slot.path), slot.attr, `[${idx}]`)
+	})
+	return el.outerHTML;
+};
+
+
+
+
+
+
+
+
+
 function escapeHTML(str) {
+	return str
     return str
     	.replace(/&/g,'&amp;')
     	.replace(/</g,'&lt;')
@@ -28,10 +67,10 @@ Utils.listDiff = (a,b)=>{
 	// things from b to add to a
 	// things to remove from a
 
-		let setA = new Set(a), setB= new Set(b);
-		a.map(i=>{setB.delete(i)});
-		b.map(i=>{setA.delete(i)});
-		return {add:[...setA], del:[...setB]}
+	let setA = new Set(a), setB= new Set(b);
+	a.map(i=>{setB.delete(i)});
+	b.map(i=>{setA.delete(i)});
+	return {add:[...setA], del:[...setB]}
 }
 
 //remove
@@ -54,6 +93,11 @@ Utils.normalize = (obj)=>{
 
 	return obj;
 }
+
+const printTree = ()=>{
+	console.log(JSON.stringify(Utils.normalize(tree), null, '  '));
+}
+
 
 //remove
 Utils.string2DOM = (htmlString)=>{
@@ -106,34 +150,34 @@ Utils.isSame2 = (a,b)=>{
 
 
 
-//remove
-Utils.extract = (obj, path)=>path.reduce((acc, p)=>acc[p], obj);
+// //remove
+// Utils.extract = (obj, path)=>path.reduce((acc, p)=>acc[p], obj);
 
 
 
 
-const isSameTests = ()=>{
-	console.assert(!Utils.isSame2());
+// const isSameTests = ()=>{
+// 	console.assert(!Utils.isSame2());
 
-	let a = undefined;
-	console.assert(!Utils.isSame2(a,a));
+// 	let a = undefined;
+// 	console.assert(!Utils.isSame2(a,a));
 
-	console.assert(Utils.isSame2([], []));
-	console.assert(Utils.isSame2([1,2], [1,2]));
+// 	console.assert(Utils.isSame2([], []));
+// 	console.assert(Utils.isSame2([1,2], [1,2]));
 
-	console.assert(!Utils.isSame2([1,2], [2]));
-	console.assert(!Utils.isSame2([1,2], [2,1]));
-
-
-	console.assert(Utils.isSame2({}, {}));
-	console.assert(Utils.isSame2({a:true}, {a:true}));
-
-	console.assert(!Utils.isSame2({a:true}, {b:true}));
-	console.assert(!Utils.isSame2({a:true}, {a:false}));
-
-	console.assert(Utils.isSame2(()=>{}, ()=>{}));
+// 	console.assert(!Utils.isSame2([1,2], [2]));
+// 	console.assert(!Utils.isSame2([1,2], [2,1]));
 
 
-}
+// 	console.assert(Utils.isSame2({}, {}));
+// 	console.assert(Utils.isSame2({a:true}, {a:true}));
 
-isSameTests();
+// 	console.assert(!Utils.isSame2({a:true}, {b:true}));
+// 	console.assert(!Utils.isSame2({a:true}, {a:false}));
+
+// 	console.assert(Utils.isSame2(()=>{}, ()=>{}));
+
+
+// }
+
+// isSameTests();

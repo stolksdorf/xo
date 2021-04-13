@@ -1,0 +1,81 @@
+<!--
+TODO:
+- Delegation of this scope is not being passed to arrow functions
+	- will need to fix this
+- Let's add effects
+
+-->
+<!DOCTYPE html>
+<html>
+<head>
+	<title>effects - xo test environment</title>
+
+	<script src='/utils.js'></script>
+	<script src='/xo.js'></script>
+	<script>window.x = xo.x</script>
+</head>
+<body>
+	<div id='root'>
+		<div>[placeholder]</div>
+	</div>
+
+	<hr />
+	<div style='display:flex'>
+		<pre><code id='tree'></code></pre>
+		<pre><code id='lib'></code></pre>
+	</div>
+</body>
+<script>
+	let tree;
+	const $root = document.getElementById('root');
+
+	// const Alert = xo.comp(function(){
+
+	// 	this.useEffect(()=>{
+	// 		console.log('hello');
+	// 		return ()=>{alert('goodbye')}
+	// 	});
+
+	// 	return x`<div>oh hello</div>`
+	// })
+
+	// const Toggle = xo.comp(function(foo){
+	// 	const [toggle, setToggle] = this.useState(false);
+
+	// 	return x`<div>
+	// 		<button onclick="${()=>setToggle(!toggle)}">Toggle</button>
+	// 		${toggle && "yo"/*Alert()*/}
+	// 	</div>`
+	// });
+	//xo.render($root, Toggle(6));
+
+
+	const Counter = xo.comp(function(){
+		console.log('in comp', this.states[0])
+		const [counter, setCounter] = this.useState(0);
+
+		const updateCounter = ()=>{
+			console.log(counter)
+			setCounter(counter + 1);
+		}
+
+		this.useEffect(()=>{
+			setInterval(()=>{
+				updateCounter()
+			}, 500);
+		}, [])
+		return x`<div>${counter}</div>`;
+	})
+
+	tree = xo.render($root, Counter())
+
+
+	console.log(Utils.normalize(tree))
+	setInterval(()=>{
+		//console.log(tree)
+		//document.getElementById('tree').innerHTML = JSON.stringify(Utils.normalize(tree), null, '  ');
+		//document.getElementById('lib').innerHTML = JSON.stringify(Utils.normalize(Archive), null, '  ');
+	}, 500)
+
+</script>
+</html>

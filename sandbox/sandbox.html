@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>xo sandbox</title>
+
+	<script src='../xo.js'></script>
+	<script src='../utils.js'></script>
+</head>
+<body>
+	<div id='root'></div>
+	<div id='root2'></div>
+</body>
+<script>
+	window.x = xo.x;
+
+	tree = null;
+
+	root = document.getElementById('root');
+
+	root2 = document.getElementById('root2');
+
+
+	const Field = function(val, onChange){
+		return x`<div class='field'>
+			<input type='text' value=${val} oninput=${({target})=>{onChange(target.value)}}></input>
+		</div>`
+	}
+
+	const Warning = xo.comp(function(){
+		this.useEffect(()=>{
+			console.log('OOPS')
+		}, [])
+		return 'Too Long';
+	})
+
+
+	const Form = xo.comp(function(){
+		const [data, setData] = this.useState('yoo');
+
+
+		return x`<div class='form'>
+			The Form!
+			${[
+				Field(data, (newVal)=>{
+					console.log('firing one')
+					setData(newVal)
+				}),
+				Field(data, (newVal)=>{
+					console.log('firing two')
+					setData(newVal)
+				}),
+			]}
+
+			${data.length > 5 ? Warning() : null}
+		</div>`
+	})
+
+	xo.render(root2, Form());
+	console.log('--------------------------')
+
+	const input = 'test'
+
+	const Select = xo.comp(function(opts){
+		const [selected, setSelected] = this.useState();
+		const [toggle, setToggle] = this.useState(true);
+
+
+		return x`<div>
+			<button onclick=${()=>setToggle(!toggle)}>toggle</button>
+			${selected == 'apple' ? input : x`<a href='google.com'>lonk</a>`}
+			${toggle
+				? x`<select onchange=${({target})=>setSelected(target.value)}>
+				${Object.entries(opts).map(([key, val])=>{
+					return x`<option value=${key} selected=${key ==selected}>${val}</option>`
+				})}
+			</select>`
+
+			: 'foo'}
+		</div>`
+	});
+
+	tree = xo.render(root, Select({
+		apple : 'Apple',
+		baroque : 'Baroque',
+		canary : 'Canary'
+	}));
+
+
+
+
+
+
+	// let foo = {
+	// 	a : 'a',
+	// 	b : 'b',
+	// 	c : 'c'
+	// }
+
+	// tree = xo.render(root, foo)
+
+
+	// printTree()
+	// console.log('--------------------------')
+
+	// tree = xo.render(root, {
+	// 	a : 'a',
+	// 	b : 'b',
+	// 	c : 'c',
+	// 	d : 'd'
+	// }, tree)
+
+
+	// printTree()
+	// console.log('--------------------------')
+
+
+	// tree = xo.render(root, {
+	// 	b : 'b',
+	// 	c : 'c',
+	// 	d : 'd'
+	// }, tree)
+
+
+	// printTree()
+	// console.log('--------------------------')
+
+	// console.log(foo)
+
+
+
+</script>
+</html>

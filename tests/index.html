@@ -2,16 +2,20 @@
 <html>
 <head>
 	<title>xo testing</title>
-	<script src='../src/parser.js'></script>
-	<script src='../src/xo.js'></script>
+	<script src='/utils.js'></script>
+	<script src='/xo.js'></script>
 </head>
 <body>
 	<div id='root'></div>
 </body>
 <script>
+	module = {};
 	tree = {};
 	tests = {};
 	root = document.getElementById('root');
+
+	window.x = xo.x;
+	window.comp = xo.comp;
 </script>
 
 <!-- Test Links Here -->
@@ -24,6 +28,8 @@
 
 
 <script>
+	/* Testing Harness */
+
 	const same = (a,b)=>{
 		if(typeof a==='object') return Object.entries(a).every(([k,v])=>same(v,b[k]));
 		return a===b;
@@ -47,7 +53,7 @@
 	};
 	checkOnly(tests);
 
-	window.x = xo.x;
+
 
 
 	let allPassing = true;
