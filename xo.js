@@ -15,7 +15,9 @@ DEBUG = false;
 const undef = (obj)=>typeof obj === 'undefined';
 const hash = (str)=>[...str].reduce((acc, char)=>{acc = ((acc<<5)-acc)+char.charCodeAt(0);return acc&acc; }, 0).toString(32);
 
-
+const id = ()=>{
+	return Math.random().toString(32).substr(2);
+}
 
 let xo = {};
 
