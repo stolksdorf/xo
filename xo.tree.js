@@ -36,6 +36,8 @@ const isListSame = (a,b)=>{
 };
 
 
+/////////////////////////
+
 Archive = (isServerSide ? global : window).Archive || {};
 
 
@@ -203,10 +205,13 @@ const getType = (obj)=>{
 xo.render = (targetEl, obj, tree)=>{
 
 	if(!tree){
+		console.log('creating tree')
 		tree = {
 			___root___ : { el : targetEl, attr : 'content' }
 		}
 	}
+
+	console.log(tree)
 
 
 	//arg    : obj, dom, parentId?
@@ -215,31 +220,47 @@ xo.render = (targetEl, obj, tree)=>{
 		const type = getType(obj);
 		const id = newId();
 
-		tree[id] = { type, el, attr };
+		tree[id] = { type, el, attr, id };
 		if(obj && obj.key) tree[id].key = obj.key;
 
 
 		if(type == 'bp'){
 			tree[id].el = xo.parser.replace(tree[id].el, obj.dom);
 			tree[id].children = obj.slots.map(({path, attr})=>{
+
+				const _id = newId();
+				tree[_id] = { el : xo.parser.extract(tree[id].el, path), attr };
+
 				//log(path, attr);
 				//log(tree[id].el, xo.parser.extract(tree[id].el, path))
-				return { el : xo.parser.extract(tree[id].el, path), attr };
+			return _id;
 			});
 		}
 		if(type =='comp'){
 			tree[id].effects = []; tree[id].states = [];
 			tree[id].refs = {};
 			tree[id].args = undefined;
-			tree[id].children = [{el : tree[id].el}];
+			tree[id].func = obj.func;
+
+
+			const _id = newId();
+
+
+			tree[id].children = [_id];
+			tree[_id] = {el : tree[id].el};
+
+
 			tree[id].useState = (init)=>{
 				let idx = tree[id].states.counter++;
 				if(undef(tree[id].states[idx])) tree[id].states[idx] = exe(init);
 				return [tree[id].states[idx], (val)=>{
+
+					console.log('running on', id)
+					console.log(tree)
 					if(tree[id].states[idx] === val) return;
 					tree[id].states[idx] = val;
 					tree[id].args = undefined;
-					render(id, obj);
+					render(obj, id);
 				}];
 			};
 			tree[id].useEffect=(func, args)=>{
@@ -270,14 +291,17 @@ xo.render = (targetEl, obj, tree)=>{
 				tree[id].el = xo.parser.replace(tree[id].el, document.createTextNode(''));
 			}
 		}
-		return id;
+		return tree[id];
 	};
 
 	//arg    : id
 	//return : dom
 	const unmount = (id)=>{
+		if(!tree[id]){
+			console.log('CAUGHT HERE', id, tree)
+		}
 		const {el, attr} = tree[id];
-		if(!tree[id] || !tree[id].type) return {el, attr};
+		//if(!tree[id].type) return {el, attr};
 
 
 		if(tree[id].effects) tree[id].effects.map(({cleanup})=>exe(cleanup));
@@ -286,15 +310,21 @@ xo.render = (targetEl, obj, tree)=>{
 		//TOD: possible re-think
 		//if(node.type == 'bp') node.el = xo.parser.replace(node.el, document.createElement('slot'));
 
+		console.log('deleteing id', id)
 		delete tree[id];
 		return {el, attr};
 	};
 
 	//arg:    obj, id
 	//return: ???, null
-	const render = (obj, node)=>{
+	const render = (obj, id)=>{
 		const type = getType(obj);
-		if(type !== node.type) node = mount(obj, unmount(node));
+		let node = tree[id];
+
+
+
+
+		if(type !== node.type) node = mount(obj, unmount(id));
 
 		if(type=='data'){
 			if(obj !== node.val){
@@ -304,7 +334,7 @@ xo.render = (targetEl, obj, tree)=>{
 		}
 		if(type == 'bp'){
 			if(obj.key !== node.key){
-				node = mount(obj, unmount(node));
+				node = mount(obj, unmount(id));
 			}
 			obj.data.map((val, idx)=>{
 
@@ -312,15 +342,17 @@ xo.render = (targetEl, obj, tree)=>{
 			});
 		}
 		if(type =='comp'){
-			if(obj.key !== node.key) node = mount(obj, unmount(node));
+			if(obj.key !== node.key) node = mount(obj, unmount(id));
 			if(isListSame(obj.args, node.args)) return node;
 
 			node.args = obj.args;
 
+			console.log(node)
+
 			node.states.counter=0;
 			node.effects.counter=0;
 			const newObj = node.func.apply(node, node.args);
-			render(node.children[0], newObj);
+			render(newObj, node.children[0]);
 
 			node.el = tree[node.children[0]].el;
 
@@ -357,7 +389,9 @@ xo.render = (targetEl, obj, tree)=>{
 			node.children = obj;
 		}
 
-		return node;
+		tree[id] = node;
+
+		return id;
 	};
 
 
@@ -400,34 +434,34 @@ xo.render = (targetEl, obj, tree)=>{
 		render(node.children[0], newObj);
 	}
 
-	const execute = (id)=>{
-		let stateCounter=0,effectCounter=0;
-		tree[id].useState = (init)=>{
-			let idx = stateCounter++;
-			if(undef(tree[id].states[idx])) tree[id].states[idx] = exe(init);
-			return [tree[id].states[idx], (val)=>{
-				if(tree[id].states[idx] === val) return;
-				tree[id].states[idx] = val;
-				tree[id].args = undefined;
-				tree[id] = render(comp, tree[id]); //FIX
-			}];
-		};
-		tree[id].useEffect=(func, args)=>{
-			let idx = effectCounter++;
-			if(undef(tree[id].effects[idx])){
-				tree[id].effects[idx] = {
-					args, func,
-					cleanup:null,
-					flag : true,
-				};
-			}
-			if(!isListSame(args, tree[id].effects[idx].args)){
-				exe(tree[id].effects[idx].cleanup);
-				tree[id].effects[idx].flag = true;
-			}
-		}
-		return comp.func.apply(tree[id], comp.args);
-	}
+	// const execute = (id)=>{
+	// 	let stateCounter=0,effectCounter=0;
+	// 	tree[id].useState = (init)=>{
+	// 		let idx = stateCounter++;
+	// 		if(undef(tree[id].states[idx])) tree[id].states[idx] = exe(init);
+	// 		return [tree[id].states[idx], (val)=>{
+	// 			if(tree[id].states[idx] === val) return;
+	// 			tree[id].states[idx] = val;
+	// 			tree[id].args = undefined;
+	// 			tree[id] = render(comp, tree[id]); //FIX
+	// 		}];
+	// 	};
+	// 	tree[id].useEffect=(func, args)=>{
+	// 		let idx = effectCounter++;
+	// 		if(undef(tree[id].effects[idx])){
+	// 			tree[id].effects[idx] = {
+	// 				args, func,
+	// 				cleanup:null,
+	// 				flag : true,
+	// 			};
+	// 		}
+	// 		if(!isListSame(args, tree[id].effects[idx].args)){
+	// 			exe(tree[id].effects[idx].cleanup);
+	// 			tree[id].effects[idx].flag = true;
+	// 		}
+	// 	}
+	// 	return comp.func.apply(tree[id], comp.args);
+	// }
 
 
 

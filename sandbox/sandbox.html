@@ -9,6 +9,7 @@
 <body>
 	<div id='root'></div>
 	<div id='root2'></div>
+	<div id='root3'></div>
 </body>
 <script>
 	window.x = xo.x;
@@ -16,8 +17,8 @@
 	tree = null;
 
 	root = document.getElementById('root');
-
 	root2 = document.getElementById('root2');
+	root3 = document.getElementById('root3');
 
 
 	const Field = function(val, onChange){
@@ -55,7 +56,7 @@
 		</div>`
 	})
 
-	xo.render(root2, Form());
+	//xo.render(root2, Form());
 	console.log('--------------------------')
 
 	const input = 'test'
@@ -79,13 +80,38 @@
 		</div>`
 	});
 
-	tree = xo.render(root, Select({
-		apple : 'Apple',
-		baroque : 'Baroque',
-		canary : 'Canary'
-	}));
+	// tree = xo.render(root, Select({
+	// 	apple : 'Apple',
+	// 	baroque : 'Baroque',
+	// 	canary : 'Canary'
+	// }));
 
 
+	console.log('--------------------------')
+
+
+	const Counter = xo.comp(function(){
+		const [count, setCount] = this.useState(0);
+		const [toggle, setToggle] = this.useState(false);
+
+		console.log('running function', count)
+
+		this.useEffect(()=>{
+			let timer = setTimeout(()=>{
+				setCount(count+1);
+				setToggle(!toggle);
+			}, 1000)
+			return ()=>{
+				clearInterval(timer);
+				return count;
+			}
+		}, [count])
+		console.log('--------------')
+		return x`<div onclick=${()=>setCount(count+1)}>count: ${count}</div>`
+	})
+
+
+	tree = xo.render(root3, Counter());
 
 
 

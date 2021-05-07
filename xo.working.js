@@ -1,11 +1,32 @@
-DEBUG = false;
-const log = DEBUG ? console.log : ()=>{};
-
 const isObj = (obj)=>!!obj && (typeof obj == 'object' && obj.constructor == Object);
 const isList = (obj)=>Array.isArray(obj) || isObj(obj);
 const exe = (obj,...args)=>typeof obj === 'function' ? obj(...args) : obj;
+
+
+const isNone = (obj)=>typeof obj=='undefined'||obj===null; //Remove
+
+
+////////////
+
+
+DEBUG = false;
+
+
 const undef = (obj)=>typeof obj === 'undefined';
 const hash = (str)=>[...str].reduce((acc, char)=>{acc = ((acc<<5)-acc)+char.charCodeAt(0);return acc&acc; }, 0).toString(32);
+
+const id = ()=>{
+	return Math.random().toString(32).substr(2);
+}
+
+let xo = {};
+
+const isServerSide = typeof window === 'undefined';
+
+
+
+const log = DEBUG ? console.log : ()=>{};
+
 
 const isListSame = (a,b)=>{
 	if(a===b) return true;
@@ -14,6 +35,14 @@ const isListSame = (a,b)=>{
 	if(A.length !== B.length) return false;
 	return A.every(k=>a[k]===b[k]);
 };
+
+
+Archive = (isServerSide ? global : window).Archive || {};
+
+
+const DP = (typeof DOMParser !== 'undefined') ? new DOMParser() : null;
+const PH = String.fromCharCode(7);
+
 const weave = (arr, func)=>{
 	let res = [];
 	arr.map((val, idx)=>{
@@ -23,15 +52,6 @@ const weave = (arr, func)=>{
 	return res;
 };
 
-const isServerSide = typeof window === 'undefined';
-
-Archive = (isServerSide ? global : window).Archive || {};
-
-const DP = (typeof DOMParser !== 'undefined') ? new DOMParser() : null;
-const PH = String.fromCharCode(7);
-
-let xo = {};
-
 xo.parser = (htmlStrings, id)=>{
 	const body = DP.parseFromString(htmlStrings.join(PH), 'text/html').body;
 	if(body.children.length > 1) throw 'Multiple top level elements were returned in blueprint';
@@ -39,9 +59,9 @@ xo.parser = (htmlStrings, id)=>{
 	const insertSlots = (el, isOnlyChild)=>{
 		const containsPlaceholder = el.nodeName == "#text" && el.nodeValue.indexOf(PH) !== -1;
 		if(containsPlaceholder){
-			el.replaceWith(...weave(el.nodeValue.trim().split(PH), xo.parser.createPlaceholder));
+			el.replaceWith(...weave(el.nodeValue.trim().split(PH), xo.parser.createSlot));
 		}
-		Array.from(el.childNodes||[]).map(cn=>insertSlots(cn, el.childNodes.length==1));
+		if(el.childNodes) Array.from(el.childNodes).map(cn=>insertSlots(cn, el.childNodes.length==1));
 	};
 	const parseElement = (el, path=[])=>{
 		if(el.nodeName == "#text" && el.nodeValue.trim() === PH){
@@ -61,7 +81,10 @@ xo.parser = (htmlStrings, id)=>{
 	insertSlots(dom);
 	parseElement(dom);
 	if(id && DEBUG) dom.setAttribute('data-xo', id);
-	return { slots, dom  };
+	return {
+		slots,
+		dom
+	};
 };
 
 xo.parser.extract = (targetEl, path)=>path.reduce((el, idx)=>el.childNodes[idx], targetEl);
@@ -86,13 +109,11 @@ xo.parser.update = (targetEl, attr, data)=>{
 	}
 	return targetEl;
 };
-xo.parser.createPlaceholder = ()=>{
+xo.parser.createSlot = ()=>{
 	const slot = document.createElement('slot');
 	slot.innerHTML = PH;
 	return slot;
 };
-
-///////////////////
 
 xo.x = (strings, ...data)=>{
 	const key = hash(strings.join(PH));
@@ -103,6 +124,7 @@ xo.comp = (func)=>{
 	const key = hash(func.toString());
 	return (...args)=>{ return { type: 'comp', func, args, key }};
 };
+
 
 const getType = (obj)=>{
 	if(!obj) return 'data';
@@ -120,23 +142,26 @@ const runComponent = (comp, node)=>{
 			if(node.states[idx] === val) return;
 			node.states[idx] = val;
 			node.args = undefined;
-			if(!node.throttle){
-				node.throttle = setTimeout(()=>{
-					node = render(comp, node);
-				},0)
-			}
+			node = render(comp, node);
 		}];
 	};
 	node.useEffect=(func, args)=>{
 		let idx = effectCounter++;
-		if(!node.effects[idx]) node.effects[idx] = {};
+		if(!node.effects[idx]){
+			node.effects[idx] = {
+				args, func,
+				cleanup:null,
+				flag : true,
+			};
+		}
 		if(!isListSame(args, node.effects[idx].args)){
 			exe(node.effects[idx].cleanup);
-			node.effects[idx] = { func, args, flag : true };
+			node.effects[idx].flag = true;
 		}
 	}
 	return comp.func.apply(node, comp.args);
-};
+}
+
 
 const mount = (obj, node)=>{
 	const type = getType(obj);
@@ -201,8 +226,11 @@ const render = (obj, node)=>{
 		}
 	}
 	if(type == 'bp'){
-		if(obj.key !== node.key) node = mount(obj, unmount(node));
+		if(obj.key !== node.key){
+			node = mount(obj, unmount(node));
+		}
 		obj.data.map((val, idx)=>{
+
 			node.children[idx] = render(val, node.children[idx]);
 		});
 	}
@@ -210,7 +238,6 @@ const render = (obj, node)=>{
 		if(obj.key !== node.key) node = mount(obj, unmount(node));
 		if(isListSame(obj.args, node.args)) return node;
 
-		node.throttle = false;
 		node.args = obj.args;
 		node.children[0] = render(runComponent(obj, node), node.children[0]);
 		node.el = node.children[0].el;
@@ -247,13 +274,13 @@ const render = (obj, node)=>{
 		});
 		node.children = obj;
 	}
+
 	return node;
 };
 
 xo.render = (targetEl, obj, tree)=>render(obj, tree || { el : targetEl, attr: 'content' });
 
 /* Utils */
-
 xo.cx = (...args)=>{
 	return args.map((arg)=>{
 		if(Array.isArray(arg)) return xo.cx(...arg);
@@ -263,7 +290,6 @@ xo.cx = (...args)=>{
 };
 
 xo.keymap = (arr, fn)=>Object.fromEntries(arr.map(fn));
-
 
 if(isServerSide){
 	xo.x = (strings, ...data)=>{return {type:'bp', strings, data}};
@@ -281,6 +307,7 @@ if(isServerSide){
 		})
 	}
 }
+
 
 if(typeof window !== 'undefined') window.xo = xo;
 if(typeof module !== 'undefined') module.exports = xo;
