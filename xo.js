@@ -29,6 +29,7 @@ Archive = (isServerSide ? global : window).Archive || {};
 
 const DP = (typeof DOMParser !== 'undefined') ? new DOMParser() : null;
 const PH = String.fromCharCode(7);
+//const PH = '___';
 
 let xo = {};
 
@@ -96,7 +97,10 @@ xo.parser.createPlaceholder = ()=>{
 
 xo.x = (strings, ...data)=>{
 	const key = hash(strings.join(PH));
-	if(!Archive[key]) Archive[key] = xo.parser(strings, key);
+	if(!Archive[key]){
+		Archive[key] = xo.parser(strings, key);
+		if(Archive[key].slots.length !== data.length) throw `Blueprint ${key} has mismatch between data and slots. Probably an HTML issue`;
+	}
 	return { type: 'bp', data, key, ...Archive[key] };
 };
 xo.comp = (func)=>{
@@ -262,7 +266,7 @@ xo.cx = (...args)=>{
 	}).join(' ');
 };
 
-xo.keymap = (arr, fn)=>Object.fromEntries(arr.map(fn));
+xo.keymap = (arr, fn)=>Object.fromEntries(Object.entries(arr).map(([k,v])=>fn(v,k)));
 
 
 if(isServerSide){

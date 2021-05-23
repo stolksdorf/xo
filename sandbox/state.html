@@ -1,77 +1,65 @@
-<!--
-TODO:
-- Delegation of this scope is not being passed to arrow functions
-	- will need to fix this
-- Let's add effects
-
--->
 <!DOCTYPE html>
 <html>
 <head>
-	<title>state - xo test environment</title>
+	<title>xo sandbox</title>
 
-	<script src='/src/debug.js'></script>
-
-	<script src='/src/utils.js'></script>
-	<script src='/src/parser.js'></script>
-	<script src='/src/xo.js'></script>
-
-
+	<script src='../xo.js'></script>
+	<script src='../utils.js'></script>
 </head>
 <body>
-	<div id='root'>
-		<div>[placeholder]</div>
-	</div>
-
-	<hr />
-	<div style='display:flex'>
-		<pre><code id='tree'></code></pre>
-		<pre><code id='lib'></code></pre>
-	</div>
+	<div id='root'></div>
+	<div id='root2'></div>
+	<div id='root3'></div>
 </body>
 <script>
-	const $root = document.getElementById('root');
+	window.x = xo.x;
 
-	const Counter = xo.comp(function(init=0){
-		const [counter, setCounter] = this.useState(init);
-		const updateCounter = ()=>setCounter(counter+1);
+
+
+	root = document.getElementById('root');
+	root2 = document.getElementById('root2');
+	root3 = document.getElementById('root3');
+
+
+
+
+	const Input = xo.comp(function(_val, onUpdate){
+		const [val, setVal] = this.useState(_val);
+
+		this.useEffect(()=>{
+			setVal(_val);
+		}, [_val])
 
 
 		return x`<div>
-			<button onclick=${updateCounter}>
-				inc
+			<button onclick=${()=>onUpdate(val)}>
+				set
 			</button>
-			<div>${counter}</div>
-			${counter>8 && "I am big!"}
+			<input type='text' onchange=${(evt)=>setVal(evt.target.value)} value=${val}></input>
 		</div>`
 	});
 
-	const Watcher = xo.comp(function(){
+	const Main = xo.comp(function(){
+		const [val, setVal] = this.useState('');
 
-		console.log('-----I am running---------')
+
+		return x`<div>
+			${val}
+			<hr></hr>
+			${Input(val, (newVal)=>setVal(newVal+'!'))}
+			<hr></hr>
+			<button onclick=${()=>setVal('')}>clear</button>
+		</div>`
 
 
-		return 'oh hi'
 	})
 
-	const StateTest = ()=>{
-		console.log("RUNNING STATE TEST")
-		return x`<div>
-			<div>${Counter(4)}</div>
-			<div>${Counter(7)}</div>
-
-			${Watcher()}
-		</div>`
-	}
 
 
 	let tree;
 
-	tree = xo.render($root, StateTest(), tree);
-	console.log(tree);
+	tree = xo.render(root, Main(), tree);
 
-
-	Debug(tree);
 
 </script>
 <script>

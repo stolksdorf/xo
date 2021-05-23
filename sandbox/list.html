@@ -3,12 +3,8 @@
 <head>
 	<title>lists - xo test environment</title>
 
-	<script src='/src/utils.js'></script>
-	<script src='/src/debug.js'></script>
-
-	<script src='/src/parser.js'></script>
-	<script src='/src/xo.js'></script>
-
+	<script src='../xo.js'></script>
+	<script src='../utils.js'></script>
 </head>
 <body>
 	<div id='test'>test</div>
@@ -23,8 +19,10 @@
 	</div>
 </body>
 <script>
-
+	window.x = xo.x;
 	const $root = document.getElementById('root');
+
+	const wait = async (n,val)=>new Promise((r)=>setTimeout(()=>r(val), n));
 
 	let tree;
 
@@ -40,7 +38,7 @@
 		return x`<div>${init}</div>`
 	}
 
-	const List = xo.comp(function(flip=false){
+	const ObjList = xo.comp(function(flip=false){
 		if(flip){
 			return {
 				a: ItemC('a'),
@@ -57,16 +55,48 @@
 		}
 	});
 
-	tree = xo.render($root, List());
-	console.log('--------------------')
+	const ArrList = xo.comp(function(flip=false){
+		if(flip){
+			return [
+				ItemC('a'),
+				ItemC('boo'),
+				ItemC('c')
+			]
+		};
+		return [
+			ItemC(0),
+			ItemC(1),
+			ItemC('b'),
+			//Item(2),
+			//ItemC(3)
+		]
+	})
 
-	tree = xo.render($root, List(true), tree);
-	console.log('--------------------')
 
-	tree = xo.render($root, List(), tree);
-	console.log('--------------------')
+	let List = ArrList;
 
-	Debug(tree);
+	// (async function(){
+
+	// 	tree = xo.render($root, List(true));
+	// 	console.log('--------------------');
+
+	// 	await wait(100);
+
+	// 	tree = xo.render($root, List(false), tree);
+	// 	console.log('--------------------')
+
+	// 	// await wait(100);
+
+	// 	// tree = xo.render($root, List(), tree);
+	// 	// console.log('--------------------')
+
+	// })();
+
+
+
+	console.log("HERE", x`<input type='checkbox' onclick=${'foo'} checked=${'foo'}>
+
+				</input>`)
 
 
 </script>

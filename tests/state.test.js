@@ -15,7 +15,7 @@ tests.state = {
 			test=foo;
 		});
 		xo.render(root, comp('init func'));
-		t.is(test, 'init func!')
+		t.is(test, 'init func!');
 	},
 	rerenders : {
 		no_change : (t)=>{
