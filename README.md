@@ -1,10 +1,6 @@
+# 🏗️ `xo`
 
-# `xo`
-
-
-
-features
-- Cup of Coffee readable: unerstand the cource code in one cup of coffee
+> An incredibly tiny React-clone, aiming for simplicity and hack-ability. _Short for "Exo-skeleton"_
 
 
 
@@ -12,41 +8,36 @@ features
 
 
 
-
-
-### Bugs to fix
-
-- Single child component eating parent in parser
-- Be able to return multi-elements in a single blueprint
-
-
-
-
-
+*features*
+- "Cup of Coffee readable": read and understand the source code over a single cup of coffee
+- Under 300 lines of code
+- No dependacies
+- Basic Hooks support: `useState`, `useEffect`
+- No special markup, no transpiling. All code written with `xo` is vanilla javascript
+- Server-side Rendering
+- Built-in handy utils: `cx`, `keymap`, `useAsync`
 
 
 
+### How to Use
 
-### Ideas
+If you are familar with React, `xo` will feel incredibly similar.
 
-- maintain an interal data structure of the existing state
-- different calls for a pure render, and an update
-- setState and Effects are attached to `this` of the component.
-- Components must be non-arrow `Function`
-- smart diff calculator
-  - Object + array, use JSON-parse-stringify
-  - Function, convert to string then test
-  - anything else use full equals
 
--
 
-Data Struct tracks
-	- props
-	- state
-	- effects
-	- el
-	- func ref
-	-
+
+## How it Works
+
+No V-dom. Most the HTML of a web app does not change when data changes. `xo` uses "surgical updates" that only executes the smallest number of DOM operations per data change, without doing large-scale diffing.
+
+Uses a tree structure.
+each node is one of 4 types: Data, Blueprint, Component or List
+
+
+
+
+
+###
 
 
 
@@ -54,14 +45,6 @@ Data Struct tracks
 
 
 
-
-
-
-
-Check out a demo [here](http://stolksdorf.github.io/XO).
-
-# What is it
-XO (for exo-skeleton) is a very light weight Javascript MVC framework (under 300 lines!). Influenced by Backbone and built on top of [Archetype](http://stolksdorf.github.io/XO). XO focuses on exposing a series of tools, rather then being an emcompassing framework.
 
 
 

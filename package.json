@@ -1,13 +1,13 @@
 {
-  "name": "xo",
-  "version": "0.0.0",
+  "name": "pico-xo",
+  "version": "0.4.1",
   "description": "",
-  "main": "src/xo.js",
+  "main": "xo.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "test": "start tests/index.html && live-server",
+    "test": "pico-check ./tests/server_side",
     "dev": "live-server"
   },
   "repository": {
@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/stolksdorf/xo#readme",
   "devDependencies": {
-    "live-server": "^1.2.1"
+    "live-server": "^1.2.1",
+    "pico-check": "^2.1.3"
   }
 }

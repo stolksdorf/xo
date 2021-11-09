@@ -19,3 +19,11 @@ const Button= (text)=>{
 }
 
 console.log(render(Button('foo')))
+
+/*
+	make sure state and effectrs work serverside
+	make sure HTML is properly outputted
+	make sure comps and templates work
+
+
+*/

@@ -27,9 +27,7 @@ tests.parser = {
 				})}
 			</select>`;
 
-		console.log(foo.dom.outerHTML)
-
-		console.log(foo)
+		t.fail();
 	},
 
 	singleEmbed : (t)=>{
@@ -47,6 +45,8 @@ tests.parser = {
 
 		//console.log(foo);
 
+		t.fail();
+
 
 	},
 	multi_top_element : (t)=>{
@@ -54,7 +54,7 @@ tests.parser = {
 			const res = x`<div>hello</div><div>world</div>`;
 		})
 	},
-	$nested_bug : (t)=>{
+	nested_bug : (t)=>{
 		// a single children seems to 'eat' it's parent
 		/*
 			This bug is due to a "fix" in the parser for when a slot is an only child
@@ -87,7 +87,7 @@ tests.parser = {
 		tree = xo.render(root, func('I am text'));
 
 
-		console.log('tree', JSON.stringify(tree, null, '  '))
+		//console.log('tree', JSON.stringify(tree, null, '  '))
 
 		t.is(tree.children[0].type, 'data');
 		t.is(tree.children[0].val, 'I am text');
@@ -96,19 +96,19 @@ tests.parser = {
 		tree = xo.render(root, func(x`<span>x</span>`), tree);
 
 
-		console.log('tree', JSON.stringify(tree, null, '  '))
+		//console.log('tree', JSON.stringify(tree, null, '  '))
 
 		t.is(tree.children[0].type, 'bp');
 		//t.is(tree.children[0].el.outerHTML, '<span>x</span>')
 
 
-		console.log('-------------')
+		//console.log('-------------')
 
-		console.log('tree', JSON.stringify(tree, null, '  '))
+		//console.log('tree', JSON.stringify(tree, null, '  '))
 
 		tree = xo.render(root, func("I am more text!"), tree);
 
-		console.log(tree)
+		//console.log(tree)
 
 
 

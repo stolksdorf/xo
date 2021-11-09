@@ -2,7 +2,6 @@
 <html>
 <head>
 	<title>xo testing</title>
-	<script src='/utils.js'></script>
 	<script src='/xo.js'></script>
 </head>
 <body>
@@ -16,6 +15,7 @@
 
 	window.x = xo.x;
 	window.comp = xo.comp;
+	xo.debug = false;
 </script>
 
 <!-- Test Links Here -->
@@ -30,6 +30,8 @@
 <script>
 	/* Testing Harness */
 
+	const sequence = async (obj, fn)=>Object.entries(obj).reduce((a,[k,v])=>a.then((r)=>fn(v,k,r)),Promise.resolve());
+
 	const same = (a,b)=>{
 		if(typeof a==='object') return Object.entries(a).every(([k,v])=>same(v,b[k]));
 		return a===b;
@@ -40,7 +42,11 @@
 			let shouldThrow = false;
 			try{ fn(); shouldThrow = true; }catch(err){}
 			if(shouldThrow) throw 'Test should throw error';
-		}
+		},
+		fail : ()=>{
+			throw `Test failed manually`;
+		},
+		pass : ()=>{}
 	};
 
 	let hasOnlyFlag = false
@@ -57,20 +63,21 @@
 
 
 	let allPassing = true;
-	const runTest = (obj, name='tests', indent='')=>{
+	const runTest = async (obj, name='tests', indent='')=>{
 		if(name[0]=='_') return console.log(`${indent}⏸ ${name}`);
 		if(typeof obj !== 'function'){
 			console.log(`${indent}${name}:`);
-			return Object.entries(obj).map(([k,v])=>{ runTest(v,k,indent+'  '); });
+			return await sequence(obj, (v,k)=>runTest(v,k,indent+'  '));
+			//return Object.entries(obj).map(([k,v])=>{ runTest(v,k,indent+'  '); });
 		}
 		if(hasOnlyFlag && name[0]!=='$') return console.log(`${indent}⏸ ${name}`);
 		try{
-			obj(harness);
+			await obj(harness);
 			console.log(`${indent}✅ ${name}`)
 		}catch(err){
 			allPassing = false;
 			console.log(`${indent}❌ ${name}`);
-			console.log(err);
+			console.error(err);
 		}
 	}
 	runTest(tests);
