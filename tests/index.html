@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>xo testing</title>
+	<script src='/xo.js'></script>
+</head>
+<body>
+	<div id='root'></div>
+</body>
+<script>
+	module = {};
+	tree = {};
+	tests = {};
+	root = document.getElementById('root');
+
+	window.x = xo.x;
+	window.comp = xo.comp;
+	xo.debug = false;
+</script>
+
+<!-- Test Links Here -->
+<script src='/tests/parser.test.js'></script>
+<script src='/tests/blueprint.test.js'></script>
+<script src='/tests/state.test.js'></script>
+<script src='/tests/effects.test.js'></script>
+<script src='/tests/list.test.js'></script>
+
+
+
+<script>
+	/* Testing Harness */
+
+	const sequence = async (obj, fn)=>Object.entries(obj).reduce((a,[k,v])=>a.then((r)=>fn(v,k,r)),Promise.resolve());
+
+	const same = (a,b)=>{
+		if(typeof a==='object') return Object.entries(a).every(([k,v])=>same(v,b[k]));
+		return a===b;
+	}
+	const harness={
+		is : (a,b)=>{ if(!same(a,b)){ throw `${a} does not equal ${b}`} },
+		throws : (fn)=>{
+			let shouldThrow = false;
+			try{ fn(); shouldThrow = true; }catch(err){}
+			if(shouldThrow) throw 'Test should throw error';
+		},
+		fail : ()=>{
+			throw `Test failed manually`;
+		},
+		pass : ()=>{}
+	};
+
+	let hasOnlyFlag = false
+	const checkOnly = (group)=>{
+		if(hasOnlyFlag) return;
+		Object.entries(group).map(([key, val])=>{
+			if(key[0]=='$') hasOnlyFlag = true;
+			if(typeof val === 'object') checkOnly(val);
+		});
+	};
+	checkOnly(tests);
+
+
+
+
+	let allPassing = true;
+	const runTest = async (obj, name='tests', indent='')=>{
+		if(name[0]=='_') return console.log(`${indent}⏸ ${name}`);
+		if(typeof obj !== 'function'){
+			console.log(`${indent}${name}:`);
+			return await sequence(obj, (v,k)=>runTest(v,k,indent+'  '));
+			//return Object.entries(obj).map(([k,v])=>{ runTest(v,k,indent+'  '); });
+		}
+		if(hasOnlyFlag && name[0]!=='$') return console.log(`${indent}⏸ ${name}`);
+		try{
+			await obj(harness);
+			console.log(`${indent}✅ ${name}`)
+		}catch(err){
+			allPassing = false;
+			console.log(`${indent}❌ ${name}`);
+			console.error(err);
+		}
+	}
+	runTest(tests);
+	//alert(allPassing?'All Passed!':'ERRORS');
+</script>
+</html>

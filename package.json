@@ -1,0 +1,28 @@
+{
+  "name": "pico-xo",
+  "version": "0.4.1",
+  "description": "",
+  "main": "xo.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "pico-check ./tests/server_side",
+    "dev": "live-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stolksdorf/xo.git"
+  },
+  "keywords": [],
+  "author": "stolksdorf",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stolksdorf/xo/issues"
+  },
+  "homepage": "https://github.com/stolksdorf/xo#readme",
+  "devDependencies": {
+    "live-server": "^1.2.1",
+    "pico-check": "^2.1.3"
+  }
+}

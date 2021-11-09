@@ -1,367 +1,295 @@
-;(function(){
-	var map = function(obj, fn){
-		var result = [];
-		for(var key in obj){
-			if(obj.hasOwnProperty(key)){ result.push(fn(obj[key], key)); }
+const isObj = (obj)=>!!obj && (typeof obj == 'object' && obj.constructor == Object);
+const isList = (obj)=>Array.isArray(obj) || isObj(obj);
+const exe = (obj,...args)=>typeof obj === 'function' ? obj(...args) : obj;
+const undef = (obj)=>typeof obj === 'undefined';
+const hash = (str)=>[...str].reduce((acc, char)=>{acc = ((acc<<5)-acc)+char.charCodeAt(0);return acc&acc; }, 0).toString(32);
+
+const isListSame = (a,b)=>{
+	if(typeof a === 'undefined' || typeof b === 'undefined') return false;
+	if(a===b) return true;
+	if(!isList(a)||!isList(b)) return false;
+	const A = Object.keys(a), B = Object.keys(b);
+	if(A.length !== B.length) return false;
+	return A.every(k=>a[k]===b[k]);
+};
+const fill = (arr, func)=>{
+	let res = [];
+	arr.map((val, idx)=>{
+		if(!!val) res.push(val);
+		if(idx != arr.length-1) res.push(func());
+	})
+	return res;
+};
+
+const isServerSide = typeof window === 'undefined';
+
+Archive = (isServerSide ? global : window).Archive || {};
+
+const DP = (typeof DOMParser !== 'undefined') ? new DOMParser() : null;
+const PH = String.fromCharCode(7);
+
+let xo = {ver: '0.4.1', debug : true};
+
+xo.parser = (htmlString, id=false)=>{
+	const body = DP.parseFromString(htmlString, 'text/html').body;
+	if(body.children.length > 1) throw 'Multiple top level elements were returned in blueprint';
+	let dom = body.children[0], slots = [];
+	const insertSlots = (el)=>{
+		const containsPlaceholder = el.nodeName == "#text" && el.nodeValue.indexOf(PH) !== -1;
+		if(containsPlaceholder){
+			el.replaceWith(...fill(el.nodeValue.trim().split(PH), xo.parser.createPlaceholder));
 		}
-		return result;
+		Array.from(el.childNodes||[]).map(cn=>insertSlots(cn));
 	};
-	var reduce = function(obj, fn, memo){
-		for(var key in obj){
-			if(obj.hasOwnProperty(key)){ memo = fn(memo, obj[key], key); }
+	const parseElement = (el, path=[])=>{
+		if(el.nodeName == "#text" && el.nodeValue.trim() === PH){
+			slots.push({ attr : 'content', path : path.slice(0,-1) });
+			el.nodeValue='';
 		}
-		return memo;
+		Array.from(el.attributes||[])
+			.map(({name, value})=>{
+				if(value.indexOf(PH) == -1) return;
+				if(value !== PH) throw `Element attribute '${name}' is overloaded`;
+				slots.push({ path, attr: name });
+				el.removeAttribute(name);
+			});
+		Array.from(el.childNodes||[])
+			.map((child, idx)=>parseElement(child, path.concat(idx)));
 	};
-	var extend = function(){
-		var result = {};
-		for(var i in arguments){
-			var obj = arguments[i];
-			for(var propName in obj){
-				if(obj.hasOwnProperty(propName)){ result[propName] = obj[propName]; }
-			}
-		}
-		return result;
-	};
+	insertSlots(dom);
+	parseElement(dom);
+	if(xo.debug && id) dom.setAttribute('data-xo', id);
+	return { slots, dom };
+};
 
-	var xo_ajax = function(self, method, callback, data){
-		callback = callback || function(){};
-		data     = extend(self.toJSON(), data);
-		var typeMap = {
-			'fetch'  : 'GET',
-			'save'   : self.id ? 'PUT' : 'POST',
-			'destroy' : 'DELETE'
-		};
-		var done = function(res){
-			self.set(res);
-			self.trigger(method, self);
-			return callback(undefined, res);
-		}
-
-		self.trigger('before:'+method, self);
-		if(!self.URL) return done(data);
-
-		$.ajax({
-			url     : self.URL() + (self.id ? "/" + self.id : ""),
-			type    : typeMap[method],
-			data    : data,
-			error   : function(req){
-				self.trigger('error', self, req.responseText);
-				return callback(req.responseText);
-			},
-			success : function(res){
-				done(res);
-				return this;
-			},
-		})
-	};
-
-	xo = {};
-
-	//Config
-	xo.elementWrapper = $ || function(e){return e;};
-	xo.useDataPrefix = false;
-
-
-	/*
-		VIEW
-	 */
-	xo.view = Archetype.extend({
-		view      : undefined,
-		schematic : undefined,
-
-		initialize : function(model){
-			this.model = model;
-			this.dom = {};
-			if(this.view) this.once('created', this.appendTo.bind(this));
-			return this;
-		},
-		prependTo  : function(target){
-			return this.appendTo(target, true);
-		},
-		appendTo : function(target, prepend){
-			var prefix = xo.useDataPrefix ? 'data-' : '';
-			if(target.length) target = target[0];
-			if(this.schematic){
-				var schematicElement;
-				if(typeof this.schematic === 'string'){
-					schematicElement = document.querySelector('[' + prefix + 'xo-schematic="' + this.schematic + '"]');
-					if(!schematicElement){throw 'xo-view: Could not find schematic with name "' + this.schematic + '"';}
-					schematicElement = schematicElement.cloneNode(true);
-					schematicElement.removeAttribute(prefix + "xo-schematic");
-				} else {
-					schematicElement = this.schematic;
-				}
-				this.dom.view = schematicElement.cloneNode(true);
-				if(prepend){
-					target.insertBefore(this.dom.view, target.firstChild);
-				}else{
-					target.appendChild(this.dom.view);
-				}
-			}
-			if(this.view){
-				this.dom.view = document.querySelector('[' + prefix + 'xo-view="' + this.view + '"]');
-				if(!this.dom.view){throw 'xo-view: Could not find view with name ' + this.view;}
-			}
-
-			var elements = this.dom.view.querySelectorAll('[' + prefix + 'xo-element]');
-			for(var i =0; i < elements.length; i++){
-				this.dom[elements[i].getAttribute(prefix + 'xo-element')] = xo.elementWrapper(elements[i]);
-			}
-			this.dom.view = xo.elementWrapper(this.dom.view);
-
-			this.render();
-			this.trigger('render');
-			return this;
-		},
-		remove : function(){
-			this.trigger('remove');
-			if(this.dom.view) this.dom.view.remove();
-			this.off();
-			return this;
-		},
-		render : function(){
-			return this;
-		}
-	});
-
-xo.view = Archetype.extend({
-	view      : undefined,
-	schematic : undefined,
-
-	initialize : function(model){
-		var self = this;
-		this.model = model;
-		this.dom = {};
-		if(this.view) this.once('created', function(){
-			self.setView(self.view);
-		});
-		return this;
-	},
-	setView: function(view){
-		if(typeof view === 'function'){
-			view = view(this.model);
-		}
-		if(typeof view === 'string'){
-			view = document.querySelector('[' + xo.domNames.view + '="' + view + '"]');
-		}
-		this.dom.view = view;
-		if(!this.dom.view){throw 'XO: View was not set: ' + view;}
-		this.getElements();
-		this.dom.view = xo.domWrapper(this.dom.view);
-		this.trigger('before:render');
-		this.render();
-		this.trigger('render');
-		return this;
-	},
-	getElements: function(){
-		var elements = this.dom.view.querySelectorAll('[' + xo.domNames.element + ']');
-		for(var i=0;i<elements.length;i++){
-			this.dom[elements[i].getAttribute(xo.domNames.element)] = xo.domWrapper(elements[i]);
-		}
-		return this;
-	},
-
-	prependTo  : function(target){
-		return this.appendTo(target, true);
-	},
-	appendTo : function(target, prepend){
-		if(target.length) target = target[0]; //jQuery target check
-		if(!target)         throw 'XO: Could not find target';
-		if(!this.schematic) throw 'XO: Template not set';
-		var newView = this.schematic.cloneNode(true);
-		if(typeof newView === 'function') newView = newView(this.model);
-		if(prepend){
-			target.insertBefore(newView, target.firstChild);
-		}else{
-			target.appendChild(newView);
-		}
-		this.setView(newView);
-		return this;
-	},
-
-	render : function(){
-		return this;
+xo.parser.extract = (targetEl, path)=>path.reduce((el, idx)=>el.childNodes[idx], targetEl);
+xo.parser.replace = (targetEl, node)=>{
+	const newNode = node.cloneNode(true);
+	targetEl.replaceWith(newNode);
+	return newNode;
+};
+xo.parser.update = (targetEl, attr, data)=>{
+	if(attr=='content'){
+		targetEl[(targetEl.nodeName == '#text') ? 'nodeValue' : 'innerHTML']
+			= (!data&&data!==0) ? '' : data;
+	}else if(attr=='class'){
+		targetEl.classList = data;
+	}else if(typeof data === 'boolean'){
+		targetEl.toggleAttribute(attr, data);
+	}else{
+		targetEl[attr] = data;
 	}
-});
+	return targetEl;
+};
+xo.parser.createPlaceholder = ()=>{
+	const slot = document.createElement('slot');
+	slot.innerHTML = PH;
+	return slot;
+};
 
-	/*
-		MODEL
-	 */
-	xo.model = Archetype.extend({
-		URL : undefined,
 
-		initialize : function(obj){
-			this.set(obj);
-			this.on('destroy', this.off);
-			return this;
-		},
-		set : function(key, value){
-			var changes = {};
-			changes[key] = value;
-			var hasChanges = false;
-			if(typeof key === 'object') changes = key;
-
-			for(var key in changes){
-				var val = changes[key];
-				if(this[key] !== val){
-					this[key] = val;
-					hasChanges = true;
-					this.trigger('change:' + key, val);
-				}
-			}
-			if(hasChanges) this.trigger('change');
-			return this;
-		},
-		onChange : function(attrName, evt){
-			if(typeof attrName === 'object'){
-				for(var k in attrName){
-					this.onChange(k, attrName[k]);
-				}
-				return this;
-			}
-			this.on('change:' + attrName, evt);
-			evt(this[attrName]);
-			return this;
-		},
-		toJSON : function(){
-			return JSON.parse(JSON.stringify(this));
-		},
-		save : function(data, callback){
-			if(typeof data === 'function') callback = data;
-			xo_ajax(this, 'save', callback, data);
-			return this;
-		},
-		fetch : function(callback){
-			xo_ajax(this, 'fetch', callback);
-			return this;
-		},
-		destroy : function(callback){
-			xo_ajax(this, 'destroy', callback);
-			return this;
+xo.x = (strings, ...data)=>{
+	const str = Array.isArray(strings) ? strings.join(PH) : strings;
+	const key = hash(str);
+	if(!Archive[key]){
+		Archive[key] = xo.parser(str, key);
+		if(Archive[key].slots.length !== data.length){
+			console.error({template: Archive[key], strings, data})
+			throw `Blueprint ${key} has mismatch between data and slots. Probably an HTML issue`;
 		}
-	}),
+	}
+	return { type: 'bp', data, key, ...Archive[key] };
+};
+xo.comp = (func)=>{
+	const key = hash(func.toString());
+	return (...args)=>{ return { type: 'comp', func, args, key }};
+};
 
+const getType = (obj)=>{
+	if(!obj) return 'data';
+	if(obj.type=='bp'||obj.type=='comp'||obj.type=='list'||obj.type=='data') return obj.type;
+	if(isList(obj)) return 'list';
+	return 'data';
+};
 
-	/*
-		COLLECTION
-	 */
-	xo.collection = Archetype.extend({
-		URL : undefined,
-		model  : xo.model,
-		models : [],
+const runComponent = (comp, node)=>{
+	let stateCounter=0,effectCounter=0;
+	node.useState = (init)=>{
+		let idx = stateCounter++;
+		if(undef(node.states[idx])) node.states[idx] = exe(init);
+		return [node.states[idx], (val, force=false)=>{
+			if(node.states[idx] === val && !force) return;
+			node.states[idx] = val;
+			node.forceUpdate();
+		}];
+	};
+	node.useAsync = (func, init)=>{
+		const [pending, setPending] = node.useState(false);
+		const [errors, setErrors] = node.useState(null);
+		const [result, setResult] = node.useState(init);
+		let res = (...args)=>{
+			setPending(true);
+			setErrors(null);
+			return func(...args)
+				.then((content)=>setResult(content))
+				.catch((err)=>setErrors(err))
+				.finally(()=>setPending(false))
+		}
+		res.pending=pending;
+		res.errors=errors;
+		res.result=result;
+		return res;
+	};
+	node.useEffect=(func, args)=>{
+		let idx = effectCounter++;
+		if(!node.effects[idx]) node.effects[idx] = {};
+		if(!isListSame(args, node.effects[idx].args)){
+			exe(node.effects[idx].cleanup);
+			node.effects[idx] = { func, args, flag : true };
+		}
+	};
+	node.forceUpdate = ()=>{
+		node.args = undefined;
+		if(!node.throttle) node.throttle = setTimeout(()=>{node = render(comp, node)},0);
+	};
+	return comp.func.apply(node, comp.args);
+};
 
-		initialize : function(objs){
-			this.set(objs);
-			this.URL       = this.model.URL || this.URL;
-			this.model.URL = this.model.URL || this.URL;
+const mount = (obj, node)=>{
+	const type = getType(obj);
+	node = { type, el : node.el, attr : node.attr||'content'};
+	if(obj && obj.key) node.key = obj.key;
 
-			return this;
-		},
-		set : function(objs){
-			this.models = [];
-			for(var i in objs){
-				this.add(objs[i])
+	if(type == 'bp'){
+		node.el = xo.parser.replace(node.el, obj.dom);
+		node.children = obj.slots.map(({path, attr})=>{
+			return { el : xo.parser.extract(node.el, path), attr };
+		});
+	}
+	if(type =='comp'){
+		node.effects = []; node.states = []; node.refs = {};
+		node.args = undefined;
+		node.children = [{el : node.el}];
+	}
+	if(type=='list'){
+		const onlyChildIsSlot = node.el.parentElement.childNodes.length == 1
+		if(onlyChildIsSlot){
+			node.el = node.el.parentElement;
+			node.el.innerHTML = '';
+		}else{
+			node.el = xo.parser.replace(node.el, document.createElement('slot'));
+		}
+		node.children = {};
+	}
+	if(type=='data'){
+		node.val = undefined;
+		if(node.attr == 'content'){
+			node.el = xo.parser.replace(node.el, document.createTextNode(''));
+		}
+	}
+	return node;
+};
+
+const unmount = (node)=>{
+	if(!node || !node.type) return node;
+	if(node.effects) node.effects.map(({cleanup})=>exe(cleanup));
+	if(node.children) Object.values(node.children).map(unmount);
+	return {el:node.el, attr:node.attr};
+};
+
+const render = (obj, node)=>{
+	const type = getType(obj);
+	if(type !== node.type) node = mount(obj, unmount(node));
+
+	if(type == 'data'){
+		if(obj !== node.val){
+			node.el = xo.parser.update(node.el, node.attr, obj);
+			node.val = obj;
+		}
+	}
+	if(type == 'bp'){
+		if(obj.key !== node.key) node = mount(obj, unmount(node));
+		obj.data.map((val, idx)=>{
+			node.children[idx] = render(val, node.children[idx]);
+		});
+	}
+	if(type == 'comp'){
+		if(obj.key !== node.key) node = mount(obj, unmount(node));
+		if(isListSame(obj.args, node.args)) return node;
+
+		node.throttle = false;
+		node.args = obj.args;
+		node.children[0] = render(runComponent(obj, node), node.children[0]);
+		node.el = node.children[0].el;
+
+		node.effects.map((eff, idx)=>{
+			if(eff.flag){
+				node.effects[idx].flag = false;
+				node.effects[idx].cleanup = eff.func();
 			}
-			return this;
-		},
-		get : function(id){
-			return reduce(this.models, function(result, model){
-				if(model.id === id) result = model;
-				return result;
-			});
-		},
-		remove : function(arg){
-			id = arg.id || arg; //handles models and raw ids
-			for(var i in this.models){
-				if(id == this.models[i].id){
-					this.trigger('remove', this.models[i]);
-					this.models.splice(i,1);
-				}
+		});
+	}
+	if(type=='list'){
+		Object.keys(node.children).map(key=>{
+			if(!undef(obj[key])) return;
+			unmount(node.children[key]);
+			node.children[key].el.remove();
+			Array.isArray(node.children) ? node.children.splice(key, 1) : delete node.children[key];
+		});
+
+		const newItems = Object.entries(obj);
+		newItems.map((_item, _idx)=>{
+			const reverse_idx = newItems.length - _idx - 1;
+			const [key, val] = newItems[reverse_idx];
+			const baseItem = node.children[key] || mount(val, {el : document.createElement('slot')});
+
+			obj[key] = render(val, baseItem);
+
+			if(node.el.childNodes[reverse_idx] !== obj[key].el){
+				const nextSibling = newItems[reverse_idx + 1];
+				const targetEl = nextSibling ? obj[nextSibling[0]].el : null;
+				node.el.insertBefore(obj[key].el, targetEl);
 			}
-			return this;
-		},
-		add : function(obj){
-			if(!this.model.isPrototypeOf(obj)) obj = this.model.create(obj);
-			obj.on('destroy', function(obj){
-				this.remove(obj);
-			}.bind(this));
+		});
+		node.children = obj;
+	}
+	return node;
+};
 
-			this.models.push(obj);
-			this.trigger('add', obj);
-			return obj;
-		},
-		each : function(fn){
-			return map(this.models, fn);
-		},
-		toJSON : function(){
-			return JSON.parse(JSON.stringify(this.models));
-		},
-
-		fetch : function(callback){
-			xo_ajax(this, 'fetch', callback);
-			return this;
-		},
-		destroy : function(callback){
-			var count = this.models.length, self = this;
-			self.trigger('before:destroy');
-			map(this.models,function(model){
-				model.destroy(function(){
-					if(--count === 0){
-						self.trigger('destroy');
-						callback && callback();
-					}
-				});
-			});
-			return this;
-		},
-		save : function(callback){
-			var count = this.models.length, self = this;
-			self.trigger('before:save');
-			map(this.models,function(model){
-				model.save(function(){
-					if(--count === 0){
-						self.trigger('save');
-						callback && callback();
-					}
-				});
-			});
-			return this;
-		},
-	});
+xo.render = (targetEl, obj, tree)=>render(obj, tree || { el : targetEl, attr: 'content' });
 
 
-	/*
-		Router
-	*/
-	xo.router = Archetype.extend({
-		routes : {},
-		initialize : function(routes){
-			map(routes, function(fn, path){this.add(path,fn)}.bind(this));
-			window.addEventListener('hashchange', this.route);
-			window.addEventListener('load', this.route);
-			return this;
-		},
-		navigate : function(path){
-			window.location.hash = path;
-			return this;
-		},
-		add : function(path, fn){
-			path = path.replace('*', '(.*?)').replace(/(\(\?)?:\w+/g, '([^\/]+)') + "$";
-			this.routes[path] = fn;
-			return this;
-		},
-		route : function(){
-			var URL = location.hash.slice(1) || '';
-			for(var path in this.routes){
-				var args = (new RegExp(path)).exec(URL);
-				if(args) this.routes[path].apply(this, args.slice(1));
-			}
-		},
-	});
+/* Utils */
+xo.cx = (...args)=>{
+	return args.map((arg)=>{
+		if(Array.isArray(arg)) return xo.cx(...arg);
+		if(isObj(arg)) return Object.entries(arg).filter(([k,v])=>!!v).map(([k,v])=>k).join(' ');
+		return arg;
+	}).join(' ');
+};
+xo.keymap = (arr, fn)=>Object.fromEntries(Object.entries(arr).map(([k,v])=>fn(v,k)));
 
-})();
+if(isServerSide){
+	xo.x = (strings, ...data)=>{return {type:'bp', strings, data}};
+	xo.render = (obj)=>{
+		if(obj && obj.type=='bp'){
+			if(Array.isArray(obj.strings)) return obj.strings.reduce((acc,str,idx)=>acc+str+xo.render(obj.data[idx]||''),'');
+			return obj.strings;
+		}
+		if(isList(obj)) return Object.values(obj).map(xo.render).join('\n');
+		if(typeof obj == 'function') return '';
+		return obj;
+	};
+	xo.comp = (func)=>{
+		return func.bind({
+			useState    : (init)=>{return [exe(init),()=>{}]},
+			useEffect   : (func)=>null,
+			useAsync    : (func, init)=>{func.result=exe(init); return func;},
+			forceUpdate : ()=>{},
+			refs : {}
+		})
+	}
+}
 
-
-
-
-
+if(typeof window !== 'undefined') window.xo = xo;
+if(typeof module !== 'undefined') module.exports = xo;
