@@ -125,18 +125,18 @@ const runComponent = (comp, node)=>{
 	};
 	node.useAsync = (func, init)=>{
 		const [pending, setPending] = node.useState(false);
-		const [errors, setErrors] = node.useState(null);
+		const [error, setError] = node.useState(null);
 		const [result, setResult] = node.useState(init);
 		let res = (...args)=>{
 			setPending(true);
-			setErrors(null);
+			setError(null);
 			return func(...args)
 				.then((content)=>setResult(content))
-				.catch((err)=>setErrors(err))
+				.catch((err)=>setError(err))
 				.finally(()=>setPending(false))
 		}
 		res.pending=pending;
-		res.errors=errors;
+		res.error=error;
 		res.result=result;
 		return res;
 	};
@@ -256,7 +256,7 @@ const render = (obj, node)=>{
 	return node;
 };
 
-xo.render = (targetEl, obj, tree)=>render(obj, tree || { el : targetEl, attr: 'content' });
+xo.render = (obj, targetEl, tree)=>render(obj, tree || { el : targetEl, attr: 'content' });
 
 
 /* Utils */
