@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>xo sandbox</title>
+
+	<script src='../xo2.js'></script>
+
+	<script>
+		window.x = xo.x;
+		window.comp = xo.comp;
+	</script>
+
+	<style>
+		.container{
+
+			background-color: red;
+
+
+		}
+
+		.container>*{
+			background-color: green;
+		}
+
+	</style>
+</head>
+<body>
+	<h1>XO Sandbox</h1>
+	<div data-x='root'>root</div>
+	<div data-x='root2'>root2</div>
+	<div data-x='root3'>root3</div>
+
+	<div class='container'>
+		<div class='yo'>
+			ye
+		</div>
+		<slot>
+			<div class='nested'>
+				yes yes
+			</div>
+		</slot>
+	</div>
+
+	<button onclick="foo()">go</button>
+
+</body>
+<script>
+	$ = [...document.querySelectorAll('[data-x]')].reduce((acc, el)=>{ acc[el.getAttribute('data-x')]=el; return acc; }, {});
+</script>
+<script>
+
+	const val = 'hello'
+	const name = 'scott'
+
+	const func = ()=>console.log('yo')
+
+
+
+
+	const Toggle = comp(function(el1, el2){
+		this.state.flip = this.init(true);
+		//const [flip, setFlip] = this.useState(false);
+
+
+		const handleClick = ()=>{
+			this.state.flip = !this.state.flip;
+		}
+
+
+		const res = this.state.flip ? el2 : el1;
+
+		console.log(res)
+
+		return x`<div class='toggle'>
+
+			<button onclick=${handleClick}>
+				${this.state.flip ? 'on' : 'off'}
+			</button>
+			${res}
+
+		</div>`;
+	});
+
+
+	const Timer = comp(function(start=0){
+		//const [count, setCount] = this.useState(0);
+
+		this.state.count = this.init(0);
+
+
+		this.useEffect(()=>{
+			console.log('moutning')
+
+			this.refs.timer = setInterval(()=>{
+				this.state.count++;
+
+			}, 1000);
+
+			return ()=>{
+				clearInterval(this.refs.timer);
+			}
+		}, []);
+
+
+		return x`<div class='timer'>${this.state.count}</div>`
+
+	});
+
+	const renders = {};
+	const draws = {};
+
+
+	const Item = comp(function(id, count){
+		this.useEffect(()=>{
+			renders[id] = renders[id] || 0;
+			renders[id]++;
+
+			console.log('MOUNTING', id);
+
+			return ()=>console.log('UNMOUNTING', id);
+		}, []);
+
+		draws[id] = draws[id] || 0;
+		draws[id]++;
+
+		//console.log({renders, draws})
+
+		return x`<div class='item'>${count}|${id} : ${renders[id] || 0} : ${draws[id]}</div>`
+	});
+
+
+	const List = comp(function(){
+
+		this.state.items = this.init(['a', 'b', 'c'])
+
+		const handleClick = ()=>{
+			this.state.flip = !this.state.flip;
+
+			if(this.state.flip){
+				this.state.items = ['a', 'c', 'd'];
+			}else{
+				this.state.items = ['a', 'b', 'c'];
+
+			}
+		}
+
+		const handleClick2 = ()=>{
+			this.state.count = this.state.count || 0;
+			this.state.count++;
+		}
+
+		console.log(this.state.flip);
+
+		const temp = Object.fromEntries(this.state.items.map(([k,v])=>{
+					return [k, Item(k, this.state.count)];
+				}))
+
+		console.log('items', temp);
+
+		return x`<div>
+			${this.state.count}
+			<button onclick=${handleClick}>toggle</button>
+			<button onclick=${handleClick2}>redraw</button>
+
+			<div>
+				${temp}
+			</div>
+
+		</div>`
+	})
+
+
+
+	const bp = x`<div>
+
+		${Toggle(Timer(), 'yo')}
+
+
+
+	</div>`;
+
+
+	const foo = render(bp, $.root);
+
+
+	/*
+
+	<h1>${val}</h1>ye ye ye ${name} go! ${name+'!'}
+	<br />
+
+
+
+	${List()}
+
+	*/
+
+
+
+	// let Observer = new MutationObserver((changes, observer)=>{
+
+	// 	console.log({changes})
+
+	// 	changes.map(({type, target, addedNodes})=>{
+	// 	//	console.log(target, type);
+	// 	});
+
+	// 	changes.map(console.log);
+
+
+	// });
+
+
+
+	// Observer.observe($.root.parentNode, {childList : true });
+
+
+	// const foo = ()=>{
+	// 	console.log('yo')
+
+	// 	const temp = createSlot()
+
+
+	// 	$.root.replaceWith(temp)
+	// }
+
+
+</script>
+</html>

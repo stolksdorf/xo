@@ -28,11 +28,11 @@ Archive = (isServerSide ? global : window).Archive || {};
 const DP = (typeof DOMParser !== 'undefined') ? new DOMParser() : null;
 const PH = String.fromCharCode(7);
 
-let xo = {ver: '0.4.1', debug : true};
+let xo = {ver: '0.5.0', debug : true};
 
 xo.parser = (htmlString, id=false)=>{
 	const body = DP.parseFromString(htmlString, 'text/html').body;
-	if(body.children.length > 1) throw 'Multiple top level elements were returned in blueprint';
+	if(body.children.length > 1) throw `Multiple top level elements were returned in blueprint: ${htmlString}`;
 	let dom = body.children[0], slots = [];
 	const insertSlots = (el)=>{
 		const containsPlaceholder = el.nodeName == "#text" && el.nodeValue.indexOf(PH) !== -1;
@@ -152,6 +152,7 @@ const runComponent = (comp, node)=>{
 		node.args = undefined;
 		if(!node.throttle) node.throttle = setTimeout(()=>{node = render(comp, node)},0);
 	};
+	node.refresh = node.forceUpdate; //Futureproofing
 	return comp.func.apply(node, comp.args);
 };
 
@@ -172,7 +173,7 @@ const mount = (obj, node)=>{
 		node.children = [{el : node.el}];
 	}
 	if(type=='list'){
-		const onlyChildIsSlot = node.el.parentElement.childNodes.length == 1
+		const onlyChildIsSlot = node.el?.parentElement?.childNodes?.length == 1
 		if(onlyChildIsSlot){
 			node.el = node.el.parentElement;
 			node.el.innerHTML = '';
@@ -190,10 +191,11 @@ const mount = (obj, node)=>{
 	return node;
 };
 
-const unmount = (node)=>{
+const unmount = (node, removeEl = false)=>{
 	if(!node || !node.type) return node;
 	if(node.effects) node.effects.map(({cleanup})=>exe(cleanup));
 	if(node.children) Object.values(node.children).map(unmount);
+	if(removeEl && node.el) node.el.remove();
 	return {el:node.el, attr:node.attr};
 };
 
@@ -230,28 +232,26 @@ const render = (obj, node)=>{
 		});
 	}
 	if(type=='list'){
-		Object.keys(node.children).map(key=>{
-			if(!undef(obj[key])) return;
-			unmount(node.children[key]);
-			node.children[key].el.remove();
-			Array.isArray(node.children) ? node.children.splice(key, 1) : delete node.children[key];
+		const oldChildren = node.children , oldKeys = Object.keys(oldChildren);
+		const newChildren = {}, newKeys = Object.keys(obj);
+
+		//Remove non-existing keys
+		oldKeys.map(key=>{ if(undef(obj[key])) unmount(oldChildren[key], true); });
+
+		//mount new keys, and re-render all keys
+		newKeys.map(key=>{
+			let item = oldChildren[key] || mount(obj[key], {el : document.createElement('slot')});
+			newChildren[key] = render(obj[key], item);
 		});
 
-		const newItems = Object.entries(obj);
-		newItems.map((_item, _idx)=>{
-			const reverse_idx = newItems.length - _idx - 1;
-			const [key, val] = newItems[reverse_idx];
-			const baseItem = node.children[key] || mount(val, {el : document.createElement('slot')});
-
-			obj[key] = render(val, baseItem);
-
-			if(node.el.childNodes[reverse_idx] !== obj[key].el){
-				const nextSibling = newItems[reverse_idx + 1];
-				const targetEl = nextSibling ? obj[nextSibling[0]].el : null;
-				node.el.insertBefore(obj[key].el, targetEl);
+		//Ensure all keys are rendered in the right order
+		newKeys.map((key, idx)=>{
+			if(oldChildren[oldKeys[idx]]?.el !== newChildren[key].el){
+				const nextSiblingEl = oldChildren[oldKeys[idx+1]]?.el;
+				newChildren[key].el = node.el.insertBefore(newChildren[key].el, nextSiblingEl);
 			}
 		});
-		node.children = obj;
+		node.children = newChildren;
 	}
 	return node;
 };

@@ -1,6 +1,6 @@
 {
   "name": "pico-xo",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "",
   "main": "xo.js",
   "directories": {
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "pico-check ./tests/server_side",
-    "dev": "live-server"
+    "dev": "pico-server --dev"
   },
   "repository": {
     "type": "git",
