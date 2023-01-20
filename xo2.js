@@ -29,11 +29,17 @@ const observable = (obj, cb)=>{
 	});
 };
 
+const isState = (obj)=>obj&&obj[2]===Symbol.for('state');
+const getStateHook = (stateArr, instance)=>instance.hooks[stateArr[3]];
+
 
 const Blueprint = {
 	cache : {},
-	parse(htmlString, sep='\x07'){
-		const html = Array.isArray(htmlString) ? htmlString.join(sep) : htmlString;
+	parse(html, sep='\x07'){
+		const sepRgx = new RegExp(`(${sep})`, 'g');
+
+		if(Array.isArray(html)) html = html.join(sep);
+		//const html = Array.isArray(htmlString) ? htmlString.join(sep) : htmlString;
 		//const key = Symbol.for(html);
 		const key = hash(html);
 		if(Blueprint.cache[key]){ return Blueprint.cache[key]; }
@@ -48,6 +54,7 @@ const Blueprint = {
 			[...el.attributes]
 				.filter(({name, value})=>value===sep)
 				.forEach(({name, value})=>{ el.removeAttribute(name); blueprint.slots.push({attr:name, path}); });
+
 			if(el.childNodes.length === 1 && el.firstChild.textContent.trim() === sep){
 				el.removeChild(el.firstChild);
 				blueprint.slots.push({attr:'innerHTML', path});
@@ -57,7 +64,7 @@ const Blueprint = {
 				let child = el.childNodes[idx];
 				if(child.nodeName !== "#text"){ parseChild(child, path.concat(idx)); }
 				else if(child.textContent.includes(sep)){
-					const newChildren = child.textContent.split(new RegExp(`(${sep})`, 'g'))
+					const newChildren = child.textContent.split(sepRgx)
 						.map((chunk, subidx)=>{
 							if(chunk!==sep) return chunk;
 							blueprint.slots.push({attr:'innerHTML', path: path.concat(idx + subidx)});
@@ -76,12 +83,15 @@ const Blueprint = {
 		return type({ blueprint : Blueprint.parse(htmlStrings), data }, 'blueprint');
 	},
 	render(blueprint, node){
+
 		const newNode = blueprint.content.firstElementChild.cloneNode(true);
 		node.replaceWith(newNode);
 		newNode.slots = blueprint.slots.map(({attr, path})=>{
 			return {attr, last:null, el: path.reduce((acc, idx)=>acc.childNodes[idx], newNode)};
 		});
 		newNode.key = blueprint.key;
+
+
 		return newNode;
 	},
 	update({data, blueprint}, node){
@@ -105,118 +115,74 @@ const Component = {
 		const key = hash(func.toString());
 		return (...args)=>{ return type({ args, key, func }, 'component'); };
 	},
-	/* WITH SIGNALS
 	makeInstance(comp, node){
 		let instance = {
 			...comp,
+			pending  : false,
 			hooks    : [],
-			signal   : observable({}, ()=>instance.scope.redraw()),
 			observer : new MutationObserver((changes)=>changes.map(({removedNodes})=>removedNodes.forEach(node=>Component.unmount(node)))),
-
-			scope : {
-				el : node,
-				useState(init){
-					const idx = instance.hooks.counter++;
-					if(!instance.hooks[idx]){
-						instance.hooks[idx] = [
-							exec(init),
-							(newVal)=>{
-								if(!eq(newVal, instance.hooks[idx][0])){
-									instance.hooks[idx][0] = newVal;
-									instance.scope.redraw();
-								}
-							}
-						];
-					}
-					return instance.hooks[idx];
-				},
-				useSignal(init){ return type([init], 'signal'); },
-				useMemo(val, dep=true){
-					const idx = instance.hooks.counter++;
-					if(!eq(dep, instance.hooks[idx]?.dep)) instance.hooks[idx] = {val, dep};
-					return instance.hooks[idx].val;
-				},
-				useEffect(func, dep=true){
-					const idx = instance.hooks.counter++;
-					if(!instance.hooks[idx]) instance.hooks[idx] = {};
-					if(!eq(dep, instance.hooks[idx].dep)){
-						exec(instance.hooks[idx].undo);
-						instance.hooks[idx] = {func, dep, flag:true};
-					}
-				},
-				useInit(func){
-					const idx = instance.hooks.counter++;
-					if(!instance.hooks[idx]){ instance.hooks[idx] = { undo: exec(func) }; }
-					return instance.hooks[idx].undo;
-				},
-				redraw(){
-					if(instance.pending) return;
-					instance.pending = window.requestAnimationFrame(()=>Component.render(instance.scope.el));
-				},
-			}
 		};
-		instance.scope = new Proxy(instance.scope, {
+
+		let scope = {
+			el : node,
+			//TODO: bump hooks out into their own section, Figure out how to import with scope
+			useState(init){
+				const idx = instance.hooks.counter++;
+				if(undef(instance.hooks[idx])){
+					instance.hooks[idx] = [
+						exec(init),
+						(newVal, force=false)=>{
+							if(force || !eq(newVal, instance.hooks[idx][0])){
+								instance.hooks[idx][0] = newVal;
+								instance.scope.redraw();
+							}
+						}, Symbol.for('state'), idx
+					];
+				}
+				return instance.hooks[idx];
+			},
+			useEffect(func, dep=true){
+				const idx = instance.hooks.counter++;
+				if(undef(instance.hooks[idx])) instance.hooks[idx] = {};
+				if(!eq(dep, instance.hooks[idx].dep)){
+					exec(instance.hooks[idx].undo);
+					instance.hooks[idx] = {func, dep, flag:true};
+				}
+			},
+			useMemo(func, dep=true){
+				const idx = instance.hooks.counter++;
+				if(!eq(dep, instance.hooks[idx]?.dep)) instance.hooks[idx] = {val:func(), dep};
+				return instance.hooks[idx].val;
+			},
+			useRef : (val={})=>{
+				const idx = instance.hooks.counter++;
+				if(undef(instance.hooks[idx])) instance.hooks[idx] = val;
+				return instance.hooks[idx];
+			},
+			useInit(func){
+				const idx = instance.hooks.counter++;
+				if(undef(instance.hooks[idx])){ instance.hooks[idx] = { undo: exec(func) }; }
+				return instance.hooks[idx].undo;
+			},
+			redraw(){
+				if(instance.pending) return;
+				instance.pending = window.requestAnimationFrame(()=>Component.render(instance.scope.el));
+			},
+		};
+		instance.scope = new Proxy(scope, {
 			get(target, key){
-				if(!undef(instance.signal[key])) return instance.signal[key];
+				if(isState(target[key])){ return getStateHook(target[key], instance)[0]; }
 				return target[key];
 			},
-			set(target, key, value){
-				if(type(value) === 'signal' && undef(instance.signal[key])){  instance.signal[key] = exec(value[0]); return true; }
-				if(type(value) !== 'signal' && !undef(instance.signal[key])){ instance.signal[key] = value; return true; }
-				target[key] = value;
+			set(target, key, val){
+				if(isState(target[key]) && !isState(val)){
+					getStateHook(target[key], instance)[1](val);
+					return true;
+				}
+				target[key] = val;
 				return true;
 			}
-		});
-		return instance;
-	},
-	*/
-	makeInstance(comp, node){
-		let instance = {
-			...comp,
-			hooks    : [],
-			observer : new MutationObserver((changes)=>changes.map(({removedNodes})=>removedNodes.forEach(node=>Component.unmount(node)))),
-
-			scope : {
-				el : node,
-				useState(init){
-					const idx = instance.hooks.counter++;
-					if(!instance.hooks[idx]){
-						instance.hooks[idx] = [
-							exec(init),
-							(newVal)=>{
-								if(!eq(newVal, instance.hooks[idx][0])){
-									instance.hooks[idx][0] = newVal;
-									instance.scope.redraw();
-								}
-							}
-						];
-					}
-					return instance.hooks[idx];
-				},
-				useMemo(val, dep=true){
-					const idx = instance.hooks.counter++;
-					if(!eq(dep, instance.hooks[idx]?.dep)) instance.hooks[idx] = {val, dep};
-					return instance.hooks[idx].val;
-				},
-				useEffect(func, dep=true){
-					const idx = instance.hooks.counter++;
-					if(!instance.hooks[idx]) instance.hooks[idx] = {};
-					if(!eq(dep, instance.hooks[idx].dep)){
-						exec(instance.hooks[idx].undo);
-						instance.hooks[idx] = {func, dep, flag:true};
-					}
-				},
-				useInit(func){
-					const idx = instance.hooks.counter++;
-					if(!instance.hooks[idx]){ instance.hooks[idx] = { undo: exec(func) }; }
-					return instance.hooks[idx].undo;
-				},
-				redraw(){
-					if(instance.pending) return;
-					instance.pending = window.requestAnimationFrame(()=>Component.render(instance.scope.el));
-				},
-			}
-		};
+		})
 		return instance;
 	},
 	mount(comp, node){
@@ -243,7 +209,17 @@ const Component = {
 
 		instance.hooks.counter = 0;
 		instance.pending = false;
-		const newNode = render(instance.func.apply(instance.scope, instance.args), node);
+
+		const res = instance.func.apply(instance.scope, instance.args)
+
+		//const newNode = render(instance.func.apply(instance.scope, instance.args), node);
+
+		const newNode = render(res, node);
+
+		if(instance.scope.debug){
+			console.log('rendering', {newNode, res})
+		}
+
 		if(newNode !== node){
 			instance.scope.el = newNode;
 			Component.cache.set(newNode, instance);
@@ -254,6 +230,8 @@ const Component = {
 			effect.undo = effect.func();
 			effect.flag = false;
 		});
+
+
 		return newNode;
 	},
 	update(comp, node){
@@ -283,18 +261,46 @@ const UpdateCollection = (newItems, node)=>{
 	return node;
 };
 
-const UpdateDOM = (val, node, attrName='innerHTML')=>{
-	if(attrName === 'class'){          node.classList = val; }
-	else if(attrName === 'innerHTML'){ node.innerHTML = (val ?? '').toString(); }
-	else if(typeof val === 'boolean'){ node.toggleAttribute(attrName, val); }
-	else{ node[attrName] = val; }
+const UpdateDOM = (val, node, attr='innerHTML')=>{
+	if(attr==='ref' && !!val){
+		val.el = node;
+		return node;
+	}
+
+	if(attr==='innerHTML'){
+		if(val === false || val === null || undef(val)){
+			const newNode = document.createElement('span');
+			node.replaceWith(newNode);
+			return newNode;
+		}else{
+			node.innerHTML = (val ?? '').toString();
+		}
+	}else{
+		if(attr === 'class'){
+			node.classList = val;
+		}else if(typeof val === 'boolean'){
+			node.toggleAttribute(attr, val);
+		}else if(typeof val === 'function'){
+			node[attr] = val;
+		}else{
+			node.setAttribute(attr, val);
+		}
+	}
 	return node;
 };
+
+// const UpdateDOM = (val, node, attr='innerHTML')=>{
+// 	if(attr === 'class'){          node.classList = val; }
+// 	else if(attr === 'innerHTML'){ node.innerHTML = (val ?? '').toString(); }
+// 	else if(typeof val === 'boolean'){ node.toggleAttribute(attr, val); }
+// 	else{ node[attr] = val; }
+// 	return node;
+// }
 
 const render = (val, node, attrName='innerHTML')=>{
 	if(type(val) === 'component') return Component.update(val, node);
 	if(type(val) === 'blueprint') return Blueprint.update(val, node);
-	if(attrName === 'innerHTML' && type(val) === 'collection') return UpdateCollection(val, node);
+	if(attrName==='innerHTML' && type(val) === 'collection') return UpdateCollection(val, node);
 	return UpdateDOM(val, node, attrName);
 };
 
@@ -325,12 +331,77 @@ if(typeof window === 'undefined'){ //Server-side rendering
 	};
 };
 
+
 module.exports = xo;
 
 
 
 
+/* WITH SIGNALS
+makeInstance(comp, node){
+	let instance = {
+		...comp,
+		hooks    : [],
+		signal   : observable({}, ()=>instance.scope.redraw()),
+		observer : new MutationObserver((changes)=>changes.map(({removedNodes})=>removedNodes.forEach(node=>Component.unmount(node)))),
 
+		scope : {
+			el : node,
+			useState(init){
+				const idx = instance.hooks.counter++;
+				if(!instance.hooks[idx]){
+					instance.hooks[idx] = [
+						exec(init),
+						(newVal)=>{
+							if(!eq(newVal, instance.hooks[idx][0])){
+								instance.hooks[idx][0] = newVal;
+								instance.scope.redraw();
+							}
+						}
+					];
+				}
+				return instance.hooks[idx];
+			},
+			useSignal(init){ return type([init], 'signal'); },
+			useMemo(val, dep=true){
+				const idx = instance.hooks.counter++;
+				if(!eq(dep, instance.hooks[idx]?.dep)) instance.hooks[idx] = {val, dep};
+				return instance.hooks[idx].val;
+			},
+			useEffect(func, dep=true){
+				const idx = instance.hooks.counter++;
+				if(!instance.hooks[idx]) instance.hooks[idx] = {};
+				if(!eq(dep, instance.hooks[idx].dep)){
+					exec(instance.hooks[idx].undo);
+					instance.hooks[idx] = {func, dep, flag:true};
+				}
+			},
+			useInit(func){
+				const idx = instance.hooks.counter++;
+				if(!instance.hooks[idx]){ instance.hooks[idx] = { undo: exec(func) }; }
+				return instance.hooks[idx].undo;
+			},
+			redraw(){
+				if(instance.pending) return;
+				instance.pending = window.requestAnimationFrame(()=>Component.render(instance.scope.el));
+			},
+		}
+	};
+	instance.scope = new Proxy(instance.scope, {
+		get(target, key){
+			if(!undef(instance.signal[key])) return instance.signal[key];
+			return target[key];
+		},
+		set(target, key, value){
+			if(type(value) === 'signal' && undef(instance.signal[key])){  instance.signal[key] = exec(value[0]); return true; }
+			if(type(value) !== 'signal' && !undef(instance.signal[key])){ instance.signal[key] = value; return true; }
+			target[key] = value;
+			return true;
+		}
+	});
+	return instance;
+},
+*/
 
 
 

@@ -19,8 +19,7 @@
 
 [![npm version](https://badge.fury.io/js/pico-xo.svg)](https://badge.fury.io/js/pico-xo)
 
-You can install it via NPM, however I suggest just copying the `xo.js` file directly into your project. It's only 300lines with no dependacies, so it's nice to be able to easily inspect the source and hack on changes if you see fit for your project.
-
+You can install it via NPM, however I suggest just copying the `xo.js` file directly into your project. It's only 300lines with no dependencies, so it's nice to be able to easily inspect the source and hack on changes if you see fit for your project.
 
 
 ### How to Use
@@ -46,7 +45,7 @@ const MyApp = comp(function(name){
 render(MyApp('Mark'), document.body.children[0]);
 ```
 
-In this example `xo.comp` is wrapping a function and turning it into a `component` that has Hooks attached to it's scoped `this`. `xo.x` takes a template string that describes HTML along with "holes" where other values should go, this is called a `blueprint`. `xo` will render the HTML to the DOM, and then update each of the "holes" with their coressponding values (which can be any javascript value, including other `blueprints` and/or `components`). If any of those values would change (such as via `useState`), `xo` will only update the exact value that has changed, no other values, and does not re-draw the HTML to the DOM. We call these "surgical updates".
+In this example `xo.comp` is wrapping a function and turning it into a `component` that has Hooks attached to it's scoped `this`. `xo.x` takes a template string that describes HTML along with "holes" where other values should go, this is called a `blueprint`. `xo` will render the HTML to the DOM, and then update each of the "holes" with their corresponding values (which can be any javascript value, including other `blueprints` and/or `components`). If any of those values would change (such as via `useState`), `xo` will only update the exact value that has changed, no other values, and does not re-draw the HTML to the DOM. We call these "surgical updates".
 
 This technique was based on [lit-html](https://lit-html.polymer-project.org/guide).
 
@@ -56,6 +55,7 @@ This technique was based on [lit-html](https://lit-html.polymer-project.org/guid
 No Virtual DOM! Most the HTML of a web app does not change when data changes. `xo` uses "surgical updates" that only executes the smallest number of DOM operations per data change, without doing large-scale diffing. At it's core `xo` uses a tree structure of nodes that can be of one of 4 types; Data, Blueprints, Components, or a List.
 
 This would be the tree structure from the above example:
+
 ```
 root
  - component (MyApp)
@@ -208,6 +208,7 @@ Calling this forces `xo` to re-render the component. Used internally by `useStat
 
 
 #### `this.el` & `refs`
+
 `this.el` stores a direct reference to the DOM element this specific component instance is being rendered into. This is useful for wrapping 3rd parties libraries such as Google maps or CodeMirror, which usually want an element they can target.
 
 
