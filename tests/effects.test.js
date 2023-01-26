@@ -1,5 +1,6 @@
+const {x, comp, render} = xo;
 
-tests.effects = {
+Tests.Effects = {
 	arg_change : async (t)=>{
 		let counter = 0;
 
@@ -7,25 +8,25 @@ tests.effects = {
 			this.useEffect(()=>{
 				counter += 1;
 			}, [args]);
-			return x`<div>comp</div>`;
+			return x`<div>comp ${args}</div>`;
 		});
 
 
-		tree = xo.render(root, comp());
-		await wait(10);
-		t.is(counter, 1);
+		Root = xo.render(comp(), Root);
+		await t.wait(10);
+		t.eq(counter, 1);
 
-		tree = xo.render(root, comp(), tree);
-		await wait(10);
-		t.is(counter, 1);
+		Root = xo.render(comp(), Root);
+		await t.wait(10);
+		t.eq(counter, 1);
 
-		tree = xo.render(root, comp('foo'), tree);
-		await wait(10);
-		t.is(counter, 2);
+		Root = xo.render(comp('foo'), Root);
+		await t.wait(10);
+		t.eq(counter, 2);
 
-		tree = xo.render(root, comp('foo'), tree);
-		await wait(10);
-		t.is(counter, 2);
+		Root = xo.render(comp('foo'), Root);
+		await t.wait(10);
+		t.eq(counter, 2);
 	},
 
 
@@ -42,47 +43,15 @@ tests.effects = {
 			return x`<div>comp</div>`;
 		});
 
-		tree = xo.render(root, comp());
-		tree = xo.render(root, x`<div>yo</div>`, tree);
-		await wait(10);
+		Root = xo.render(comp(), Root);
+		Root = xo.render(x`<div>yo</div>`, Root);
+		await t.wait(10);
 
 
-		t.is(test, true)
+		t.eq(test, true)
 	},
 
 	run_once_on_mount : async (t)=>{
-		let counter = 0;
-
-		const comp = xo.comp(function(){
-			this.useEffect(()=>{
-				counter += 1;
-			}, []);
-			return x`<div>comp</div>`;
-		});
-
-		tree = xo.render(root, comp());
-		await wait(10);
-		t.is(counter, 1);
-
-		tree = xo.render(root, comp(), tree);
-		await wait(10);
-		t.is(counter, 1);
-
-		tree = xo.render(root, comp(), tree);
-		await wait(10);
-		t.is(counter, 1);
-
-		tree = xo.render(root, comp(), tree);
-		await wait(10);
-		t.is(counter, 1);
-
-		tree = xo.render(root, comp(), tree);
-		await wait(10);
-		t.is(counter, 1);
-
-	},
-
-	no_args_run_every_render : async (t)=>{
 		let counter = 0;
 
 		const comp = xo.comp(function(){
@@ -92,25 +61,58 @@ tests.effects = {
 			return x`<div>comp</div>`;
 		});
 
-		tree = xo.render(root, comp(12));
-		await wait(10);
-		t.is(counter, 1);
+		Root = xo.render(comp(), Root);
+		await t.wait(10);
+		t.eq(counter, 1);
 
-		tree = xo.render(root, comp(13), tree);
-		await wait(10);
-		t.is(counter, 2);
+		Root = xo.render(comp(), Root);
+		await t.wait(10);
+		t.eq(counter, 1);
 
-		tree = xo.render(root, comp(14), tree);
-		await wait(10);
-		t.is(counter, 3);
+		Root = xo.render(comp(), Root);
+		await t.wait(10);
+		t.eq(counter, 1);
 
-		tree = xo.render(root, comp(15), tree);
-		await wait(10);
-		t.is(counter, 4);
+		Root = xo.render(comp(), Root);
+		await t.wait(10);
+		t.eq(counter, 1);
 
-		tree = xo.render(root, comp(16), tree);
-		await wait(10);
-		t.is(counter, 5);
+		Root = xo.render(comp(), Root);
+		await t.wait(10);
+		t.eq(counter, 1);
+
+	},
+
+	//TODO: Why do I want this?
+	_no_args_run_every_render : async (t)=>{
+		let counter = 0;
+
+		const comp = xo.comp(function(){
+			this.useEffect(()=>{
+				counter += 1;
+			});
+			return x`<div>comp</div>`;
+		});
+
+		Root = xo.render(comp(12), Root);
+		await t.wait(10);
+		t.eq(counter, 1);
+
+		Root = xo.render(comp(13), Root);
+		await t.wait(10);
+		t.eq(counter, 2);
+
+		Root = xo.render(comp(14), Root);
+		await t.wait(10);
+		t.eq(counter, 3);
+
+		Root = xo.render(comp(15), Root);
+		await t.wait(10);
+		t.eq(counter, 4);
+
+		Root = xo.render(comp(16), Root);
+		await t.wait(10);
+		t.eq(counter, 5);
 	}
 
 

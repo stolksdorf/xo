@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!-- Doctype HTML5 -->
+<html lang='en'>
+	<head>
+		<meta charset='utf-8'>
+		<meta name='viewport' content='width=device-width, initial-scale=1'>
+
+		<title>XO - Tests</title>
+		<script src='http://localhost:8333/require'></script>
+	</head>
+	<body>
+		<nav id='nav'></nav>
+		<hr />
+		<div id='root' class='root'>Select a test</duv>
+	</body>
+	<script>
+		let Root = document.getElementById('root');
+		const Nav = document.getElementById('nav');
+		const Tests = {
+			dom_update : require('./xo/tests/dom_update.test.js'),
+			parser : require('./xo/tests/parser.test.js'),
+			list : require('./xo/tests/list.test.js'),
+			state : require('./xo/tests/state.test.js'),
+			mutation : require('./xo/tests/mutation_ob.test.js'),
+			complex : require('./xo/tests/complex.test.js'),
+		};
+		Object.keys(Tests).map(name=>Nav.insertAdjacentHTML('beforeend', `<a href='?${name}'>${name}</a> `));
+		const test = window.location.search.substring(1);
+		if(Tests[test]) Tests[test]();
+	</script>
+</html>
