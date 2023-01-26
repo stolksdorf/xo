@@ -1,4 +1,4 @@
-const xo = require('../xo2.js');
+const xo = require('../');
 const {x, comp, render} = xo;
 
 

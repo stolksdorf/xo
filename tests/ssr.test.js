@@ -1,7 +1,7 @@
 const {x, comp, render} = xo.ssr;
 
 
-Tests.$SSR = {
+Tests.SSR = {
 
 
 	complex(t){

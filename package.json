@@ -2,7 +2,7 @@
   "name": "xo",
   "version": "3.0.0",
   "description": "Lightweight web component framework",
-  "main": "xo2.js",
+  "main": "xo.js",
   "scripts": {
     "test": "node ./tests/server",
     "dev": "start ./tests/index.html && node --watch ./tests/server"
