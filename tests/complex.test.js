@@ -2,7 +2,7 @@ const {x, comp, render} = xo;
 
 
 
-Tests.$Complex = async (t)=>{
+Tests.Complex = async (t)=>{
 	let mounted = {}, unmounted={};
 
 	const Item = comp(function(id, initTxt){
@@ -38,7 +38,7 @@ Tests.$Complex = async (t)=>{
 		</div>`;
 	})
 
-	let baseScope;
+	let baseScope, itemsRef={};
 	const Base = comp(function(arg){
 		this.items = this.useState({
 			a : Item('a', 'I am A item'),
@@ -81,21 +81,22 @@ Tests.$Complex = async (t)=>{
 			<button onclick=${this.composition}>change composition</button>
 			<button onclick=${this.swap}>swap</button>
 			<hr />
-			${this.itemOrder.reduce((acc, id)=>{
-				acc[id] = this.items[id];
-				return acc;
-			}, {})}
+			<div ref=${itemsRef}>
+				${this.itemOrder.reduce((acc, id)=>{
+					acc[id] = this.items[id];
+					return acc;
+			}, {})}</div>
 		</div>`;
 
 	});
 	Result = render(Base());
-
-	console.log(mounted)
-
-	console.log(Result.innerHTML)
-
 	await t.wait(50);
-	baseScope.swap();
-	await t.wait(50);
-	console.log(mounted)
+	t.eq(['a','b','c'], [...itemsRef.el.childNodes].map(y=>y.id));
+
+	baseScope.swap(); await t.wait(50);
+	t.eq(['a','e','c'], [...itemsRef.el.childNodes].map(y=>y.id));
+
+	baseScope.composition(); await t.wait(50);
+	t.eq(['d','a','c','e'], [...itemsRef.el.childNodes].map(y=>y.id));
+
 }

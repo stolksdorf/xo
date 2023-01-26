@@ -32,7 +32,7 @@ const formatErr = (err)=>{
 		.filter(line=>!(/(at (async )?picocheck\.?)|(picocheck.js)|(node:internal)/).test(line))
 		.map(line=>{
 			if(typeof process !== 'undefined') return line.replace(process.cwd(), '.');
-			if(typeof window !== 'undefined') return line.replace(window.location.origin, '.');
+			//if(typeof window !== 'undefined') return line.replace(window.location.origin, '.');
 			return line;
 		})
 		.concat(err.cause ? '\nCause: '+print(err.cause) : [])

@@ -5,13 +5,13 @@
 
 *features*
 - "Cup of Coffee readable": read and understand the source code over a single cup of coffee
-- Under 300 lines of code
+- ~300 lines of code
 - No dependencies
-- Basic Hooks support: `useState`, `useEffect`
+- Basic Hooks support: `useState`, `useEffect`, `useRef`, `useMemo`
 - No transpiling, no special markup, . Uses tagged template strings for HTML templates.
 - All code written with `xo` is vanilla javascript
-- Server-side Rendering is supported
-- Built-in handy utils: `cx`, `keymap`, `useAsync`
+- Server-side Rendering supported
+- Built-in handy utils
 
 
 
@@ -19,16 +19,16 @@
 
 [![npm version](https://badge.fury.io/js/pico-xo.svg)](https://badge.fury.io/js/pico-xo)
 
-You can install it via NPM, however I suggest just copying the `xo.js` file directly into your project. It's only 300lines with no dependencies, so it's nice to be able to easily inspect the source and hack on changes if you see fit for your project.
+You can install it via NPM, however I suggest just copying the `xo.js` file directly into your project. It's only ~300lines with no dependencies, so it's friendly to inspect the source and hack up some changes if you see fit for your project.
 
 
 ### How to Use
 
-If you are familar with React, `xo` will feel incredibly similar. You create components by making functions that return `blueprints` or other components. Then use `xo.render([your top-level component], [target element])` to render your component into a target DOM element. You're done! 🎉
+If you are familiar with React, `xo` will feel incredibly similar. You create components by making functions that return `blueprints` or other components. Then use `xo.render([your top-level component], [target element])` to render your component into a target DOM element. You're done! 🎉
 
 *Example*
 ```js
-const {x, comp, render} = require('pico-xo');
+const {x, comp, render} = require('./xo.js');
 
 const NameWidget = (name)=>{
 	return x`<h3>${name}</h3>`;
@@ -64,17 +64,17 @@ Under the hood, `xo` creates `<template>` elements with the associated markup an
 ```js
 let name = 'Guest', isFancy = true;
 
-xo.render(xo.x`<div class=${isFancy?'fancy':''}> Hello ${name}! </div>`, document.body);
+xo.render(xo.x`<div class=${isFancy?'fancy':''}> Hello ${name}! </div>`);
 
 // Draws `<div class=""> Hello <span></span>! </div>` into the body
 // Then sets .classList to ['fancy'] and the spans's innerHTML to 'Guest'
 
 name = 'Scott';
-xo.render(xo.x`<div class=${isFancy?'fancy':''}> Hello ${name}! </div>`, document.body);
+xo.render(xo.x`<div class=${isFancy?'fancy':''}> Hello ${name}! </div>`);
 
-// Since this blueprint has the same key as what's already in the body, don't need to draw anything new
+// Since this blueprint has the same template key as what's already in the body, we don't need to draw the template again
 // isFancy did not change, so no need to modify the classList
-// Only the span's innerHTML gets updated. The entire `xo.render` call resulted in a single DOM call.
+// Only the span's innerHTML gets updated. The entire `xo.render` call resulted in a single DOM update!
 ```
 
 
@@ -96,11 +96,11 @@ const Counter = xo.comp(function(initVal){
 xo.render(Counter(0), document.body);
 ```
 
-3. **Lists**
+3. **Collections**
 
-[Lists](https://reactjs.org/docs/lists-and-keys.html) are javascript arrays or plain objects that are trying to be rendered into the `innerHTML` of an element, essentially. Mostly used for collections of components or blueprints. 
+[Collections](https://reactjs.org/docs/lists-and-keys.html) are javascript arrays or plain objects that are trying to be rendered into the `innerHTML` of an element. Mostly used for lists of components or blueprints. 
 
-If the list is an object, `xo` will not re-mount items that share the same key between re-renders, essentially replicating [React's Key system](https://reactjs.org/docs/lists-and-keys.html#keys) without needing extra markup or attributes. This is useful for lists of components that need to maintain state, but could be re-arranged, added, or removed dynamically.
+If the collection is a plain object, `xo` will not re-mount items that share the same key between re-renders, essentially replicating [React's Key system](https://reactjs.org/docs/lists-and-keys.html#keys) without needing extra markup or attributes. This is useful for lists of components that need to maintain state, but could be re-arranged, added, or removed dynamically.
 
 
 4. **Data**
@@ -121,9 +121,11 @@ Basically everything else: Strings, numbers, booleans, functions, etc. Data is r
 ### Utils
 
 - `xo.cx(arg1, arg2,...)`: An implementation of [npm classnames](https://www.npmjs.com/package/classnames)
-- `xo.eq(a,b)`: A fast deep comparison util.
+- `xo.sx(styleObj)`: Converts a CSS-like object into a CSS string. Any capitals in key names get kebob-cased. Eg. `sx({ backgroundColor :'red'}) => "background-color:red;`
+- `xo.eq(a,b)`: A fast deep comparison between `a` and `b`.
 - `xo.type(arg, [setType])`: A lightweight object typing util. Used to identify Component, Blueprint, and State objects from regular objects.
 - `xo.hash()`: Very simple string hashing function. `xo` uses string hashes for component and blueprint keys. Feel free to swap out the hash function if you need to.
+- `xo.observable(val, onChangeFunc)`: Creates an nested observable Proxy of the `val`. When a property within `val` gets changed, it triggers `onChangeFunc`. Used for reactive Component State.
 
 
 

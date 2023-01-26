@@ -1,25 +1,18 @@
-const check = require('../picocheck.js');
-const xo = require('../../');
-const {x, comp, cx, render} = xo;
+const {x, comp, render} = xo.ssr;
 
-check({
 
-	basic(t){
-		let name = 'Scott';
-		const tmpl = x`<div class='basic'>${name}</div>`;
-		const res = render(tmpl);
-		t.eq(`<div class='basic'>Scott</div>`, res);
-	},
-	component(t){
+Tests.$SSR = {
+
+
+	complex(t){
 		let renders = 0
-
 		const Item = (name)=>x`<li>${name}</li>`
 		const Widget = comp(function(initText){
 			this.text = this.useState(initText);
 			this.useEffect(()=>{
 				t.fail('useEffect should not fire')
 			});
-			const id = this.useRef('foo');
+			const id = this.useRef('test_id');
 
 			const onClick = ()=>{};
 
@@ -28,13 +21,14 @@ check({
 			return x`<div id=${id} onclick=${onClick}>${this.text}<ul>${['a', 'b'].map(Item)}</ul></div>`
 		});
 
-		const Result = xo.render(Widget('hello'));
+		const Result = render(Widget('hello there'));
 
+		t.eq(`<div id=test_id onclick="">hello there!<ul><li>a</li><li>b</li></ul></div>`, Result);
 		t.eq(1, renders, 'Should only render once');
 
-		console.log(Result)
-
+		document.body.innerHTML = Result;
+		t.eq('test_id', document.body.firstElementChild.id);
 	}
 
 
-})
+};
