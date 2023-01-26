@@ -29,7 +29,6 @@ const UserBadge = (name, reputationCount=0)=>{
 In this example, we've made a function that takes a username and a reputation count and returns a blueprint for a badge we want to display.
 
 
-
 If you aren't familiar with tagged template strings, the above example will get split into 2 arrays, one for all the string parts, and one for all the values in the `${}`, and then both are passed to the `x` function are arguments.
 
 The `x` function will return a blueprint, which is an object that has the values array and a HTML template element constructed from the strings array.

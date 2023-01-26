@@ -30,24 +30,7 @@
  */
 export const h = (e, p = {}, ...c) => ({ e, p, c });
 
-/**
- * Create a virtual node based on the HTML-like template string, i.e:
- * `<tag attr="value" attr2="value2"></tag>`. Tags can be self-closing.
- * Attribute values must be double quoted, unless they are placeholders.
- * Placeholders can appear only as tag names, attribute values or in between
- * the tags, like text or child elements.
- *
- * @function
- * @param {Array.<string>} strings - An array of raw string values from the template.
- * @param {...*} [fields] - Variadic arguments, containing the placeholders in between.
- * @returns {VNode} - A virtual node with properties and children based on the
- * provided HTML markup.
- *
- * @example
- * x`<div className="foo"><h1>${mytext}</h1></div>`;
- * x`<div className=${myClass} />`;
- * x`<${MyComponent} foo="42"><p>Hello</p></${MyComponent}>`;
- */
+
 export const x = (strings, ...fields) => {
   // Stack of nested tags. Start with a fake top node. The actual top virtual
   // node would become the first child of this node.
@@ -239,17 +222,8 @@ export const useEffect = (cb, args = []) => {
 // Returns true if two arrays `a` and `b` are different.
 const changed = (a, b) => !a || b.some((arg, i) => arg !== a[i]);
 
-/**
- * Render a virtual node into a DOM element.
- *
- * @function
- * @param {VNode|VNode[]} vnode - The virtual node to render.
- * @param {Element} dom - The DOM element to render into.
- * @param {string} ns - namespace URI for SVG nodes.
- *
- * @example
- * render(x`<${MyComponent} />`, document.body);
- */
+
+
 export const render = (vlist, dom, ns) => {
   // Make vlist always an array, even if it's a single node.
   vlist = [].concat(vlist);

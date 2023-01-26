@@ -1,52 +1,36 @@
-const xo = require('../xo2.js');
 const {x, comp, render} = xo;
 
 
-module.exports = ()=>{
+Tests.Parser = {
+	basic(){
+		let name = 'scoot';
+		const func = ()=>alert('yo');
+		const template = x`<div onclick=${func}>
+			oh hello ${name}! ${true}
+			<button disabled=${true}>${name}</button>
+		</div>`;
 
+		Result = render(template);
 
-	let name = 'scoot';
+		//console.log(Result.innerHTML)
 
-	const func = ()=>alert('yo');
+		window.temp1 = template.tmpl;
+	},
+	basic2(t){
 
+		const func = ()=>alert('yo');
 
+		const template2 = x`<div onclick=${func}>
+			oh hello ${name}! ${true}
+			<button disabled=${true}>${name}</button>
+		</div>`;
 
-	const template = x`<div onclick=${func}>
-		oh hello ${name}! ${true}
-		<button disabled=${true}>${name}</button>
-	</div>`;
-
-	console.log(template)
-
-	window.temp1 = template.tmpl;
-
-
-	const template2 = x`<div onclick=${func}>
-		oh hello ${name}! ${true}
-		<button disabled=${true}>${name}</button>
-	</div>`;
-
-	console.log(template2);
-
-
-	// console.log(template);
-
-	// Root = render(template, Root);
-
-
-	// name = 'scoot';
-
-	// Root = render(x`<div onclick=${func}>oh hello ${name}!</div>`, Root);
-
-
-	// console.log('TEST2');
-
-	// const temp = x`<div id=${'a'} onclick=${'b'}>
-	// 		${'c'}: <em>${'d'}</em> hey !${'e'} <a>lonk</a>
-	// 	</div>`
-	// ;
-
-	// console.log('HERE');
-
-	// Root = render(temp, Root);
-};
+		//console.log(template2);
+	},
+	basic3(t){
+		const temp = x`<div id=${'a'} onclick=${'b'}>
+				${'c'}: <em>${'d'}</em> hey !${'e'} <a>lonk</a>
+			</div>`;
+		Result = render(temp);
+	}
+}

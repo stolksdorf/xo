@@ -1,6 +1,6 @@
 # 🏗️ `xo`
 
-> An incredibly tiny React-clone, aiming for simplicity and hack-ability. _Short for "Exo-skeleton"_
+> An incredibly tiny React-clone, aiming for simplicity and hack-ability.
 
 
 *features*
@@ -8,7 +8,7 @@
 - Under 300 lines of code
 - No dependencies
 - Basic Hooks support: `useState`, `useEffect`
-- No special markup, no transpiling. Uses tagged template strings.
+- No transpiling, no special markup, . Uses tagged template strings for HTML templates.
 - All code written with `xo` is vanilla javascript
 - Server-side Rendering is supported
 - Built-in handy utils: `cx`, `keymap`, `useAsync`
@@ -48,6 +48,91 @@ render(MyApp('Mark'), document.body.children[0]);
 In this example `xo.comp` is wrapping a function and turning it into a `component` that has Hooks attached to it's scoped `this`. `xo.x` takes a template string that describes HTML along with "holes" where other values should go, this is called a `blueprint`. `xo` will render the HTML to the DOM, and then update each of the "holes" with their corresponding values (which can be any javascript value, including other `blueprints` and/or `components`). If any of those values would change (such as via `useState`), `xo` will only update the exact value that has changed, no other values, and does not re-draw the HTML to the DOM. We call these "surgical updates".
 
 This technique was based on [lit-html](https://lit-html.polymer-project.org/guide).
+
+
+
+`xo` has 4 "types" to build your UI
+
+
+1. **Blueprints**
+
+Blueprints are [tagged template strings](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals) that describe what the HTML should look like. Using expression placeholders in the template string let you inject and update markup without needing to re-draw the entire element each time there's a change. 
+
+Under the hood, `xo` creates `<template>` elements with the associated markup and tracks where each placeholder is within the markup to make updates as efficient as possible. For a deeper dive check out the [How it works]() doc.
+
+
+```js
+let name = 'Guest', isFancy = true;
+
+xo.render(xo.x`<div class=${isFancy?'fancy':''}> Hello ${name}! </div>`, document.body);
+
+// Draws `<div class=""> Hello <span></span>! </div>` into the body
+// Then sets .classList to ['fancy'] and the spans's innerHTML to 'Guest'
+
+name = 'Scott';
+xo.render(xo.x`<div class=${isFancy?'fancy':''}> Hello ${name}! </div>`, document.body);
+
+// Since this blueprint has the same key as what's already in the body, don't need to draw anything new
+// isFancy did not change, so no need to modify the classList
+// Only the span's innerHTML gets updated. The entire `xo.render` call resulted in a single DOM call.
+```
+
+
+2. **Components**
+
+Components are stateful functions that return one of the 4 types to render (usually a blueprint). The function's scope is populated with the element it's rendering to, [hooks](#Hooks), and other useful utilities. The function is called whenever the component needs to update, whether it's arguments have changed, it's state has been modified, or it's been manually triggered to re-render.
+
+
+```js
+
+const Counter = xo.comp(function(initVal){
+	const [counter, setCounter] = this.useState(initVal);
+	return xo.x`<div class='Counter'>
+		Clicked ${counter} times!
+		<button onclick=${()=>setCounter(counter+1)}>Increment</button>
+	</div>`;
+});
+
+xo.render(Counter(0), document.body);
+```
+
+3. **Lists**
+
+[Lists](https://reactjs.org/docs/lists-and-keys.html) are javascript arrays or plain objects that are trying to be rendered into the `innerHTML` of an element, essentially. Mostly used for collections of components or blueprints. 
+
+If the list is an object, `xo` will not re-mount items that share the same key between re-renders, essentially replicating [React's Key system](https://reactjs.org/docs/lists-and-keys.html#keys) without needing extra markup or attributes. This is useful for lists of components that need to maintain state, but could be re-arranged, added, or removed dynamically.
+
+
+4. **Data**
+
+Basically everything else: Strings, numbers, booleans, functions, etc. Data is rendered into a DOM Node at a specific attribute name. `xo` has internal logic to figure out the best way to update the DOM based on the type of the data and the attribute it's updating.
+
+
+
+
+### API
+
+- `xo.render(xo type, DOM node, [attribute name='innerHTML'])`: Renders the `xo object` into the DOM node at the `attribute name`. Usually only need to call this once to kick off your app.
+- `xo.comp(renderFunction)`: Creates a new `xo` Component function that can be used in other Components or Blueprints.
+- `xo.x`: Tagged template string function that returns a new Blueprint based on the template string.
+
+
+
+### Utils
+
+- `xo.cx(arg1, arg2,...)`: An implementation of [npm classnames](https://www.npmjs.com/package/classnames)
+- `xo.eq(a,b)`: A fast deep comparison util.
+- `xo.type(arg, [setType])`: A lightweight object typing util. Used to identify Component, Blueprint, and State objects from regular objects.
+- `xo.hash()`: Very simple string hashing function. `xo` uses string hashes for component and blueprint keys. Feel free to swap out the hash function if you need to.
+
+
+
+
+
+
+
+
+
 
 
 ## How it Works

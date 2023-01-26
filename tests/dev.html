@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!-- Doctype HTML5 -->
+<html lang='en'>
+	<head>
+		<meta charset='utf-8'>
+		<meta name='viewport' content='width=device-width, initial-scale=1'>
+		<title>Dev: xo testing</title>
+		<script src='http://localhost:8333/dev'></script>
+
+	</head>
+	<body>
+		<main></main>
+	</body>
+	<script>
+		const check = require('./picocheck.js');
+		let Root = ()=>document.body.firstElementChild;
+		let Tests = {};
+
+		require('./parser.test.js');
+		require('./comp.test.js');
+		require('./complex.test.js');
+		//require('./effects.test.js');
+
+		check(Tests, {timeout:2000});
+	</script>
+</html>

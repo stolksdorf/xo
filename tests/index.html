@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<meta charset="UTF-8">
 	<title>xo testing</title>
-	<script src='/xo.js'></script>
+	<script src='./picocheck.js'></script>
+	<script src='../xo2.js'></script>
 </head>
 <body>
 	<div id='root'></div>
@@ -15,24 +17,25 @@
 
 	window.x = xo.x;
 	window.comp = xo.comp;
-	xo.debug = false;
+
 </script>
 
+<!--
 <script src='/tests/picocheck.js'></script>
 
-<!-- Test Links Here -->
+
 <script src='/tests/parser.test.js'></script>
 
-<!--
+
 <script src='/tests/blueprint.test.js'></script>
 <script src='/tests/state.test.js'></script>
 <script src='/tests/effects.test.js'></script>
--->
-<script src='/tests/list.test.js'></script>
 
+<script src='/tests/list.test.js'></script>
+-->
 
 
 <script>
-	PicoCheck(tests)
+	//PicoCheck(tests)
 </script>
 </html>
